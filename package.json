@@ -1,0 +1,35 @@
+{
+  "name": "job_watcher",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "start:dry": "tsx src/index.ts --dry-run",
+    "start:verbose": "tsx src/index.ts --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexandreTimal/Job_watcher.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/alexandreTimal/Job_watcher/issues"
+  },
+  "homepage": "https://github.com/alexandreTimal/Job_watcher#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.3.1",
+    "playwright": "^1.58.2",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
