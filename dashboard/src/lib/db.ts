@@ -1,7 +1,21 @@
 import Database from 'better-sqlite3';
 import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 
-const DB_PATH = resolve(process.cwd(), '../data/job-watcher.db');
+// Try multiple paths — Turbopack changes cwd during build
+function findDbPath(): string {
+  const candidates = [
+    resolve(process.cwd(), '../data/job-watcher.db'),      // from dashboard/
+    resolve(process.cwd(), 'data/job-watcher.db'),          // from project root
+    resolve(process.cwd(), '../../data/job-watcher.db'),    // from deeper build dir
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return candidates[0]!; // fallback, will throw with clear error
+}
+
+const DB_PATH = findDbPath();
 
 let db: Database.Database | null = null;
 

@@ -158,9 +158,9 @@ export default function ConfigPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-1.5">
-                {kw.terms.map((term) => (
+                {kw.terms.map((term, i) => (
                   <Badge
-                    key={term}
+                    key={`${term}-${i}`}
                     variant="outline"
                     className="text-xs font-mono"
                   >
