@@ -1,0 +1,101 @@
+# generated: 2026-04-09
+# last_updated: 2026-04-09
+# project: Job_watcher
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-04-09
+last_updated: 2026-04-09
+project: Job_watcher
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # Sprint 0 : Fondation Technique
+  epic-0: in-progress
+  0-1-initialisation-du-monorepo-depuis-create-t3-turbo: review
+  0-2-schema-drizzle-postgres-chiffrement-pgcrypto: backlog
+  0-3-infrastructure-docker-caddy-ci-cd-sentry: backlog
+  epic-0-retrospective: optional
+
+  # Epic 1 : Authentification & Inscription
+  epic-1: backlog
+  1-1-authentification-auth-js-email-oauth-google: backlog
+  1-2-essai-gratuit-7-jours-roles-utilisateur: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2 : Pipeline de Collecte & Traitement des Offres
+  epic-2: backlog
+  2-1-structure-pipeline-bullmq-schema-offres: backlog
+  2-2-source-france-travail-api-officielle: backlog
+  2-3-source-wttj-scraping-metadonnees: backlog
+  2-4-source-complementaire-hellowork: backlog
+  2-5-normalisation-deduplication-purge: backlog
+  2-6-orchestrateur-pipeline-scheduler-nocturne: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3 : Onboarding Candidat & Profil
+  epic-3: backlog
+  3-1-schema-profil-preferences-upload-cv-extraction-llm: backlog
+  3-2-validation-du-profil-extrait-ecran-preferences: backlog
+  3-3-modification-du-profil-preferences-mots-cles-negatifs: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4 : Scoring, Feed & Experience Mobile
+  epic-4: backlog
+  4-1-moteur-de-scoring-regles-ponderees: backlog
+  4-2-generation-du-feed-pre-calcule-par-profil: backlog
+  4-3-api-trpc-feed-swipe: backlog
+  4-4-interface-swipe-mobile-pwa: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5 : Experience Desktop & Archivage
+  epic-5: backlog
+  5-1-liste-des-offres-sauvegardees-redirection-source: backlog
+  5-2-marquage-candidature-landing-page-marketing: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6 : Abonnement Stripe & RGPD
+  epic-6: backlog
+  6-1-integration-stripe-checkout-webhooks: backlog
+  6-2-gestion-abonnement-upgrade-downgrade-annulation: backlog
+  6-3-export-donnees-suppression-de-compte-rgpd: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7 : Dashboard Ops, Notifications & Observabilite
+  epic-7: backlog
+  7-1-dashboard-monitoring-sources-metriques: backlog
+  7-2-logs-erreur-alertes-automatiques-run-de-test: backlog
+  7-3-notifications-email-quotidiennes: backlog
+  epic-7-retrospective: optional

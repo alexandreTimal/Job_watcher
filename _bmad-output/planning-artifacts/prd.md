@@ -1,313 +1,380 @@
 ---
 stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
-inputDocuments: []
+inputDocuments: ['user-provided-brief-jobfindeer']
 workflowType: 'prd'
 documentCounts:
-  briefs: 0
+  briefs: 1
   research: 0
   brainstorming: 0
   projectDocs: 0
 classification:
-  projectType: cli_tool
+  projectType: web_app
   domain: general
-  complexity: medium
+  complexity: high
   projectContext: greenfield
-  notifications: notion_only
 ---
 
-# Product Requirements Document - Job_watcher
+# Product Requirements Document - JobFindeer
 
 **Author:** Alexandre
-**Date:** 2026-03-30
+**Date:** 2026-04-09
 
 ## Résumé Exécutif
 
-Job_watcher est un outil CLI TypeScript exécuté en cron qui automatise la veille d'offres d'emploi (alternance et stage de fin d'études) pour un profil technique spécifique. Il agrège les offres depuis une dizaine de sources hétérogènes (flux RSS, APIs publiques, scraping web, parsing d'emails), les filtre par un système de scoring pondéré par mots-clés, dédoublonne les résultats via SQLite, et centralise les offres pertinentes dans une base Notion consultable quotidiennement.
+JobFindeer est un assistant mobile-first de recherche d'emploi qui agrège quotidiennement les offres des principaux job boards français, les score par pertinence pour chaque profil candidat, et les présente sous forme d'un feed personnalisé. Le produit s'arrête au tri : la candidature se fait toujours sur la source d'origine.
 
-Le problème résolu : la veille emploi manuelle sur de multiples plateformes est chronophage, sujette aux oublis, et génère du bruit (doublons, offres hors profil). Chaque jour sans automatisation est une offre potentiellement ratée.
+Le problème résolu : la recherche d'emploi en France impose de surveiller 5 à 10 plateformes, de filtrer manuellement des centaines d'offres non pertinentes, et de repérer les doublons cross-sources. Ce bruit consume le temps et l'énergie qui devraient aller à la candidature elle-même.
 
-L'utilisateur cible est Alexandre, étudiant Bac+5 Epitech Lyon (diplôme 2027), avec un profil TypeScript/React/Next.js, cherchant activement dès maintenant.
+L'utilisateur cible est un chercheur d'emploi français, mobile-first, qui veut investir son temps à postuler, pas à chercher. JobFindeer traduit son profil (CV + préférences) en un feed quotidien d'offres scorées. L'intelligence est côté demande : la qualité du produit dépend de sa capacité à comprendre ce que l'utilisateur cherche et à le refléter dans le scoring.
+
+Le concept est validé par un prototype fonctionnel (Job_watcher, CLI personnel) et confirmé par des retours d'entourage sur l'universalité du problème de bruit. Le modèle freemium (9,90 € / 19,90 €/mois) est contraint par un plafond de coût opérationnel dur de 5 €/client/mois.
+
+**Promesse :** Moins de temps à chercher, plus de temps à postuler.
 
 ### Ce qui rend ce projet spécial
 
-Contrairement aux alertes email génériques des plateformes d'emploi, Job_watcher est un pipeline sur-mesure calibré sur un profil exact : mots-clés pondérés par catégorie (poste, stack technique, type de contrat, contexte startup), scoring de pertinence avec 3 niveaux de priorité, et dédoublonnage cross-sources. Le résultat : ouvrir Notion une fois par jour et trouver uniquement du signal, zéro bruit.
+Le différenciateur n'est pas la quantité d'offres ou la couverture des sources — c'est la qualité de la traduction entre le profil candidat et les offres remontées. L'onboarding (extraction CV par LLM + ciblage métier/secteur/géo + préférences salaire/contrat/télétravail) est le moment critique qui conditionne toute la valeur en aval. Un feed parfaitement scoré est invisible : l'utilisateur voit simplement "des offres qui lui correspondent". Un feed mal scoré rend le produit inutile.
 
-L'insight clé : le problème n'est pas le manque d'offres, c'est le ratio signal/bruit. Le scoring transforme des centaines d'entrées brutes en une liste actionnable triée par pertinence.
+Le périmètre volontairement restreint (pas d'auto-apply, pas de tracking lourd, pas de messagerie) est à la fois la force produit et la défense juridique. En ne stockant que les métadonnées et en redirigeant systématiquement vers la source, JobFindeer se positionne comme assistant de tri, pas comme job board concurrent.
 
 ## Classification du Projet
 
-- **Type :** CLI Tool / Script d'automatisation cron
-- **Domaine :** General (productivité personnelle / automatisation de veille)
-- **Complexité :** Moyenne — intégration multi-sources (RSS, scraping, APIs), gestion d'état SQLite, dédoublonnage cross-plateformes
-- **Contexte :** Greenfield — projet neuf, aucun code existant
-- **Sortie :** Notion uniquement (pas de notifications push)
+- **Type :** Web App (PWA mobile-first Phase 1, app native React Native Phase 2)
+- **Domaine :** General (recherche d'emploi, avec contraintes juridiques structurantes sur le scraping et la RGPD)
+- **Complexité :** Élevée — pipeline de scraping industriel multi-sources, scoring hybride (règles pondérées → LLM sémantique), contrainte de coût dure (< 5 €/client/mois), maintenance scraping comme risque opérationnel permanent
+- **Contexte :** Greenfield (nouveau produit SaaS, héritier conceptuel du prototype CLI Job_watcher)
 
 ## Critères de Succès
 
 ### Succès Utilisateur
 
-- Zéro doublon dans Notion : une offre identique trouvée sur plusieurs sources n'apparaît qu'une seule fois
-- Zéro faux positif : aucune offre non pertinente ne passe le filtre (score < 3 = ignoré, pas d'exception)
-- Consultation quotidienne de Notion suffit comme unique point de veille — plus besoin de visiter aucune plateforme manuellement
-- Chaque entrée Notion contient toutes les infos nécessaires pour décider de postuler ou non (entreprise, poste, localisation, type contrat, lien direct, score, priorité)
+- L'utilisateur ouvre JobFindeer **plusieurs fois par semaine** (3+/semaine = utilisateur engagé)
+- Sur mobile : taux élevé de **swipes positifs** — signe que le scoring remonte des offres pertinentes
+- Sur web : taux élevé d'**archivage des offres** pour candidature ultérieure — signe que le handoff mobile → desktop fonctionne
+- L'utilisateur ne ressent plus le besoin de visiter les job boards directement
 
 ### Succès Business
 
-- Gain de temps : élimination complète de la veille manuelle multi-plateformes
-- Couverture exhaustive : 8+ sources actives couvrant l'écosystème emploi français (job boards, APIs, pages carrières, alertes)
-- Détection d'opportunités qui seraient passées inaperçues en veille manuelle (pages carrières, Google Alerts)
+- **Conversion essai → payant : 15%** comme cible initiale
+- **Coût opérationnel par client payant : < 5 €/mois** (contrainte dure, non négociable)
+- **Cible MAU : 100 000** (horizon de dimensionnement, pas objectif immédiat)
+- Rétention : les utilisateurs payants restent abonnés au-delà du premier mois (churn à définir post-lancement)
 
 ### Succès Technique
 
-- Toutes les sources opérationnelles : Indeed RSS, Google Alerts RSS, WTTJ, France Travail API, HelloWork RSS, Station F, pages carrières, LinkedIn emails (Gmail API)
-- Résilience : si une source échoue, les autres continuent normalement (isolation par try/catch)
-- Exécution cron 4x/jour en semaine (9h, 13h, 17h, 21h heure FR)
-- Logs structurés : timestamp, source, nombre d'offres trouvées/filtrées/ajoutées par run
+- Pipeline de scraping opérationnel sur toutes les sources Phase 1
+- Feed quotidien généré et disponible chaque matin pour chaque utilisateur actif
+- Observabilité scraping : alerte automatique quand un scraper casse
 
 ### Résultats Mesurables
 
-- 0% de doublons cross-sources dans Notion
-- 0% de faux positifs (offres hors profil)
-- 8 sources de données actives et fonctionnelles
-- Exécution complète en < 2 minutes par run
-- 100% des offres pertinentes stockées dans Notion avec scoring et métadonnées complètes
-
-## Périmètre Produit
-
-### Livraison Complète (pas de MVP — projet entier)
-
-- **Sources RSS :** Indeed, Google Alerts, HelloWork (3 parsers RSS)
-- **Sources API :** France Travail API REST (OAuth2 client_credentials)
-- **Sources Scraping :** WTTJ (API interne ou Playwright), Station F (Cheerio)
-- **Monitoring :** Pages carrières de 14+ entreprises (hash diff SHA-256)
-- **Email Parsing :** Alertes LinkedIn via Gmail API
-- **Filtrage :** Scoring pondéré par mots-clés (4 catégories + négatifs), seuil à 3 points, 3 niveaux de priorité
-- **Dédoublonnage :** Hash titre+entreprise normalisés, fenêtre 30 jours, SQLite
-- **Output :** Base Notion avec propriétés complètes (entreprise, poste, contrat, localisation, source, lien, score, priorité, statut, date relance, notes)
-- **Déploiement :** GitHub Actions cron (4x/jour semaine) avec persistance SQLite via cache
-- **Logs :** Logger structuré console + fichier
-
-### Évolutions Futures (hors périmètre actuel)
-
-- Notifications Telegram (temps réel + digest)
-- Résumé IA des offres via API Claude
-- Détection automatique de nouvelles sources pertinentes
+- KPIs de qualité du scoring : **à définir post-MVP** (ratio swipes positifs/négatifs, taux de clic vers source, taux d'archivage)
+- Économie unitaire validée en production : coût réel par client mesuré et comparé au plafond de 5 €
+- Nombre de sources opérationnelles simultanées
 
 ## Parcours Utilisateur
 
-### 1. Consultation quotidienne (parcours principal)
+### 1. Léa — Le scroll utile (parcours principal candidat)
 
-**Scène d'ouverture :** Chaque matin, Alexandre ouvre Notion avec son café. Avant Job_watcher, il passait 30-45 minutes à checker Indeed, WTTJ, LinkedIn, France Travail, des pages carrières... Maintenant il a une seule base Notion.
+**Persona :** Léa, 26 ans, développeuse frontend React en CDI à Lyon, en recherche passive-active. Elle passe 45 min par jour sur son téléphone dans les transports et pendant les pauses. Avant JobFindeer, elle alternait entre Indeed, WTTJ et LinkedIn — 3 apps, beaucoup de bruit, des doublons, et l'impression de rater des offres.
 
-**Action :** Il ouvre sa database Notion, triée par date. Les nouvelles offres de la veille sont là, chacune avec un score de pertinence et une priorité (⭐ à ⭐⭐⭐). Il scanne les ⭐⭐⭐ d'abord, clique sur le lien direct, lit l'offre, et change le statut en "🟡 Postulée" s'il candidate. Pour les ⭐⭐, il fait un tri rapide. Les ⭐ il les ignore sauf si le titre l'intrigue.
+**Scène d'ouverture :** 8h15, métro ligne B. Léa sort son téléphone. Au lieu d'ouvrir Instagram, elle ouvre JobFindeer. Notification : "12 nouvelles offres, 3 à fort match".
 
-**Climax :** Il tombe sur une offre Product Manager Alternance chez Finary, détectée via le monitoring de leur page carrières — une offre qu'il n'aurait jamais vue manuellement.
+**Rising Action :** Elle scrolle son feed. Chaque carte montre le titre, l'entreprise, le salaire, la localisation, et un score de compatibilité avec justification courte ("87% — React + Lyon + 38-42k"). Elle swipe à droite les offres qui l'intéressent, à gauche celles qui ne collent pas. En 4 minutes, elle a trié ses 12 offres. 5 gardées, 7 écartées.
 
-**Résolution :** En 5 minutes sa veille est faite. Il passe le reste de son temps à postuler au lieu de chercher.
+**Climax :** Parmi les 5, une offre Lead Frontend chez une startup healthtech lyonnaise qu'elle ne connaissait pas — détectée via WTTJ, scorée à 92%. Exactement ce qu'elle cherchait sans savoir que ça existait.
 
-### 2. Setup initial
+**Résolution :** Le soir, 20h30, Léa ouvre son laptop. Elle va sur la version web de JobFindeer, retrouve ses 5 offres archivées. Pour chacune, elle clique "Voir sur la source", atterrit sur le site d'origine, et postule. 5 minutes de scroll utile le matin → 3 candidatures le soir.
 
-**Scène d'ouverture :** Alexandre clone le repo, lit le README. Il doit connecter ses comptes et configurer ses préférences.
+### 2. Léa — L'onboarding (premier contact)
 
-**Action :** Il copie `.env.example` en `.env`, renseigne ses tokens (Notion API, Gmail, France Travail). Il crée ses Google Alerts et récupère les URLs RSS. Il ajuste `config.ts` : ses mots-clés, les URLs de pages carrières à surveiller, les poids de scoring. Il lance `npx tsx src/index.ts` une première fois en local pour vérifier que tout tourne.
+**Scène d'ouverture :** Léa découvre JobFindeer via un post LinkedIn. Elle clique, atterrit sur la landing page mobile. "Moins de temps à chercher, plus de temps à postuler." Elle tape "Essai gratuit 7 jours".
 
-**Climax :** Le premier run détecte 47 offres brutes, en filtre 12 pertinentes, les pousse dans Notion. Ça marche.
+**Rising Action :** Création de compte (email + mot de passe ou OAuth Google). Écran suivant : "Upload ton CV pour qu'on comprenne ton profil." Elle uploade son PDF. En quelques secondes, le LLM extrait ses compétences, son expérience, sa localisation. L'app lui présente un résumé structuré : "React, TypeScript, 3 ans d'XP, Lyon". Elle valide et ajuste.
 
-**Résolution :** Il configure le cron GitHub Actions, push, et l'outil tourne en autonomie.
+**Climax :** Écran de préférences : type de contrat (CDI), fourchette salariale (38-45k), télétravail (hybride), secteurs préférés (tech, healthtech, fintech), périmètre géo (Lyon + 30km). Elle valide en 2 minutes.
 
-### 3. Maintenance et debug
+**Résolution :** "Ton premier feed sera prêt demain matin." Le lendemain, notification push. Elle ouvre : 15 offres scorées, classées par compatibilité. Le moment "aha" — c'est exactement ce qu'elle cherche, sans effort.
 
-**Scène d'ouverture :** Un matin, aucune offre WTTJ dans Notion depuis 3 jours. Quelque chose a cassé.
+### 3. Léa — Le scoring déçoit (edge case)
 
-**Action :** Il consulte les logs du dernier run GitHub Actions. Il voit `[WTTJ] ERROR: Selector .job-card not found — page structure may have changed`. Les autres sources ont tourné normalement (résilience OK). Il inspecte le site WTTJ, constate un changement de HTML, met à jour le sélecteur CSS dans `wttj.ts`, teste en local, push.
+**Scène d'ouverture :** Après 2 semaines, Léa constate que son feed remonte des offres de développeuse PHP et des postes juniors à 28k. Le scoring ne filtre pas assez bien.
 
-**Résolution :** Le run suivant récupère les offres WTTJ normalement. Les offres des 3 jours manqués sont rattrapées.
+**Rising Action :** Elle commence à swiper à gauche systématiquement. La lassitude s'installe.
 
-### 4. Ajustement du scoring et des sources
+**Climax :** JobFindeer détecte le pattern (trop de swipes négatifs consécutifs) et lui propose : "Tes résultats ne te conviennent pas ? Ajuste tes préférences." Elle ajoute "PHP" en mot-clé négatif, remonte son salaire minimum à 35k.
 
-**Scène d'ouverture :** Après 2 semaines d'utilisation, Alexandre constate trop d'offres "comptable" ou "juridique" qui passent avec un score de 3.
+**Résolution :** Le feed du lendemain est nettement plus pertinent. Note : au MVP, l'ajustement est manuel. Le volume de swipes (~100/mois) est trop faible pour un apprentissage automatique — piste V2+ si le volume le permet.
 
-**Action :** Il ouvre `config.ts`, ajoute des mots-clés négatifs ("comptable", "juridique", "RH") et ajuste le seuil minimum. Il veut aussi surveiller une nouvelle startup qui vient de lever — il ajoute l'URL de leur page carrières dans la config.
+### 4. Alexandre — Le dashboard ops (admin/monitoring)
 
-**Résolution :** Les runs suivants sont plus propres. Plus tard, quand il cherchera un CDI au lieu d'une alternance, il modifiera les mots-clés `contract_match` et les URLs de recherche.
+**Persona :** Alexandre, fondateur et opérateur unique au MVP. Il gère le pipeline de scraping et intervient quand un scraper casse.
 
-### 5. Ajout d'une nouvelle source
+**Scène d'ouverture :** 9h, Alexandre ouvre le dashboard de monitoring. Vue d'ensemble : 4 sources actives, taux de succès par source sur les dernières 24h.
 
-**Scène d'ouverture :** Un nouveau job board spécialisé tech apparaît. Alexandre veut l'intégrer.
+**Rising Action :** France Travail API : 100% ✅, 342 offres. WTTJ : 87% ⚠️, 12 erreurs timeout. HelloWork : 100% ✅, 156 offres. Source 4 : 0% ❌ — le sélecteur CSS ne matche plus rien depuis 6h.
 
-**Action :** Il crée un nouveau fichier dans `src/sources/`, implémente l'interface `Source` (fetch + parse → `JobOffer[]`), l'ajoute à la liste des sources dans `config.ts`, teste en local.
+**Climax :** Il clique sur la source en erreur. Log : "Selector `.job-card-v2` not found — page structure may have changed". Il inspecte le site, met à jour le sélecteur, relance un run de test depuis le dashboard.
 
-**Résolution :** La nouvelle source est active au prochain run cron, intégrée dans le pipeline existant (filtrage, dédoublonnage, Notion).
+**Résolution :** La source repasse au vert. Le dashboard montre les métriques globales : offres collectées/jour, taux de dédup, utilisateurs servis.
 
 ### Synthèse des Capacités Révélées
 
 | Parcours | Capacités requises |
 |---|---|
-| Consultation quotidienne | Notion avec métadonnées complètes, scoring, priorité, lien direct |
-| Setup initial | Config centralisée, .env, documentation claire, exécution locale |
-| Maintenance/debug | Logs structurés par source, isolation des erreurs, messages d'erreur explicites |
-| Ajustement scoring/sources | Config modifiable (mots-clés, poids, URLs), hot-reload sans redéployer le cron |
-| Ajout nouvelle source | Architecture modulaire, interface Source commune, ajout plug-and-play |
+| Scroll quotidien (Léa) | Feed scoré mobile, swipe tri, métadonnées + score + justification, notifications push |
+| Onboarding (Léa) | Upload CV, extraction LLM, écran préférences, OAuth/email auth, essai 7 jours |
+| Scoring déçoit (Léa) | Paramètres ajustables, détection d'insatisfaction, mots-clés négatifs |
+| Archivage web (Léa) | Liste offres sauvegardées sur web, redirection vers source, état partagé mobile↔web |
+| Dashboard ops (Alexandre) | Monitoring par source, taux succès, alertes, logs erreurs, run de test manuel, métriques globales |
 
-## Exigences Spécifiques CLI Tool
+## Exigences Spécifiques au Domaine
 
-### Vue d'ensemble
+### Conformité & Cadre Juridique
 
-Job_watcher est un script cron scriptable (non interactif) avec deux modes d'exécution : le mode normal (cron) qui écrit dans Notion + SQLite, et un mode dry-run pour tester sans effets de bord. Un tableau de bord local (accessible via navigateur, non hébergé) permet de visualiser les statistiques et l'historique.
+- **RGPD :** registre des traitements, export de données utilisateur, droit à l'oubli implémenté dès le MVP — pas optionnel
+- **Scraping — règles non négociables :**
+  - Stocker uniquement les métadonnées (titre, entreprise, lieu, salaire, type contrat, URL source, date publication, hash contenu). Jamais la description complète
+  - Toujours rediriger vers la source pour la candidature. Pas de bouton "postuler" interne
+  - Ne jamais contourner de protection technique (CAPTCHA, IP bans, fingerprinting). Si une source bloque, on s'arrête
+  - Respecter robots.txt comme signal d'opposition
+  - Logger le trafic renvoyé aux sources (preuve de loyauté)
+  - Canal de réception et traitement immédiat des demandes de cessation
+  - Purger les offres expirées rapidement (rétention courte)
 
-### Structure des Commandes
+### Contraintes Techniques Juridiques
 
-- `npx tsx src/index.ts` — Exécution standard (cron), toutes sources actives
-- `npx tsx src/index.ts --dry-run` — Simulation : affiche les résultats en console sans écrire dans Notion ni SQLite
-- `npx tsx src/index.ts --verbose` — Logs détaillés pour debug
-- Pas de shell completion nécessaire
-- Pas de mode interactif
+- **Logs de redirection :** conservation des preuves de trafic renvoyé aux sources, à des fins de défense juridique
+- **CGU & politique de confidentialité :** positionnement clair "assistant de tri, pas job board, pas d'auto-apply"
+- **Process de cessation :** adresse de contact documentée, SLA de réponse, procédure de retrait de source
 
-### Formats de Sortie
+### Stratégie par Source (risque juridique)
 
-- **Notion API** — Output principal, base de données avec propriétés complètes
-- **SQLite** — Stockage local pour dédoublonnage et historique
-- **Console/logs** — Résumé par run (offres scannées, filtrées, ajoutées, erreurs)
-- **Tableau de bord local** — Interface web servie en localhost pour visualiser les stats, l'historique des runs, les offres par source/score/date
+| Source | Risque | Stratégie |
+|---|---|---|
+| France Travail (API officielle) | Nul | Source prioritaire |
+| WTTJ | Faible | Scraping métadonnées + redirection systématique |
+| HelloWork | À évaluer | Stratégie similaire WTTJ |
+| Indeed | Élevé | Pas de scraping — partenariat ou Mantiks.io |
+| LinkedIn | Très élevé | Agrégateur tiers ou partenariat uniquement |
 
-### Schéma de Configuration
+### Risques et Mitigations Juridiques
 
-- **`.env`** — Secrets uniquement (tokens API Notion, Gmail, France Travail)
-- **`config.ts`** — Configuration métier exportée : mots-clés par catégorie avec poids, URLs RSS, URLs pages carrières à surveiller, seuil de score minimum, fenêtre de dédoublonnage (jours)
-- Pas de fichier de config externe (YAML/JSON) — tout en TypeScript pour le typage et l'autocomplétion
+- **Changement unilatéral des conditions d'un job board** → multi-sources, pas de dépendance critique à une seule source, process de cessation rapide
+- **RGPD (stockage CV, profil)** → chiffrement, export/suppression automatisés, minimisation des données conservées
+- **Requalification en job board** → contrainte d'architecture (le code ne permet pas l'affichage complet ni l'auto-apply), pas seulement une décision produit
 
-### Support Scripting
+## Exigences Spécifiques Web App
 
-- Exécutable via GitHub Actions cron (process one-shot, code retour 0/1)
-- Exécutable en local via `npx tsx`
-- Compatible avec tout scheduler (cron unix, node-cron, Railway)
-- Code retour non-zéro si erreur critique (toutes les sources échouent)
+### Deux Surfaces Distinctes
+
+JobFindeer est composé de deux surfaces avec des approches design séparées :
+
+1. **App mobile (swipe & tri)** — PWA mobile-only, conçue pour être portée en app native React Native en Phase 2. Design mobile-only (375px iPhone SE comme référence), pas de version desktop.
+2. **Web desktop (récap & candidature)** — Landing page marketing (SEO), offres sauvegardées, paramètres, facturation. Design desktop-first (1024px+).
+
+### Surface Mobile
+
+- Design mobile-only — composants et patterns transposables en React Native (pas de dépendance DOM, pas d'animations CSS complexes, pas de hover states)
+- PWA : manifest.json, icône écran d'accueil, mode standalone
+- Cibles : Safari iOS, Chrome Android
+
+### Surface Desktop
+
+- Landing page marketing avec SEO (meta tags, Open Graph, sitemap, structured data)
+- Liste offres sauvegardées + redirection source, paramètres profil, gestion abonnement
+- Cibles : Chrome, Firefox, Edge, Safari desktop
+
+### Synchronisation
+
+- Pas de synchronisation temps réel — un refresh suffit
+- État partagé côté serveur : swipes mobile visibles sur desktop après refresh
+- Feed recalculé en batch (pipeline nocturne)
+
+### Mode Offline
+
+- **MVP (PWA) :** connexion requise
+- **Phase 2 (app native) :** cache local du feed, swipes offline synchronisés au retour réseau
 
 ### Considérations d'Implémentation
 
-- Architecture modulaire : chaque source implémente une interface `Source` commune (`fetch() → JobOffer[]`)
-- Rate limiting intégré : délai configurable entre requêtes HTTP (1-2s par défaut)
-- Résilience : `Promise.allSettled` pour l'exécution parallèle des sources, une source en erreur n'affecte pas les autres
-- Tableau de bord : serveur HTTP local léger (pas de framework lourd), lecture seule sur la base SQLite
+- `output: 'standalone'` dans next.config.js (déploiement VPS)
+- Deux layouts Next.js distincts : `/app/(mobile)` et `/app/(desktop)`
+- TanStack Query pour le cache HTTP côté client
+- Node.js classique derrière Caddy (pas d'Edge Functions)
 
-## Scoping du Projet & Stratégie de Développement
+## Scoping & Stratégie de Développement
 
-### Approche : Livraison Complète (sans phasage MVP)
+### Stratégie MVP
 
-Le projet est livré en une seule itération complète. Pas de MVP intermédiaire — toutes les sources, le filtrage, le dédoublonnage, Notion, le tableau de bord local et le déploiement sont inclus. L'utilisateur unique (Alexandre) et le périmètre borné rendent cette approche viable.
+**Approche :** MVP complet (Phase 1 entière) — pas de sous-découpage. Chaque brique est nécessaire pour délivrer la promesse. Retirer l'onboarding LLM, le scoring, ou le swipe casse la proposition de valeur.
 
-### Ordre d'Implémentation
+**Développeur unique :** Alexandre. Chaque choix technique doit minimiser la surface de maintenance, pas maximiser les features.
 
-1. Types, config, infrastructure (SQLite, logger)
-2. Module RSS générique → Indeed, Google Alerts, HelloWork
-3. Filtrage par scoring + dédoublonnage
-4. Intégration Notion API
-5. France Travail API (OAuth2)
-6. WTTJ (API interne ou Playwright)
-7. Station F (Cheerio)
-8. Monitoring pages carrières (hash diff)
-9. LinkedIn emails (Gmail API)
-10. Mode dry-run + flags CLI (--dry-run, --verbose)
-11. Tableau de bord local (serveur HTTP localhost, lecture SQLite)
-12. Déploiement GitHub Actions cron
+### Phase 1 — MVP
+
+**Parcours supportés :** onboarding candidat, scroll quotidien mobile, archivage desktop, dashboard ops.
+
+**Capacités :**
+- Auth (email + OAuth Google) + essai 7 jours + Stripe
+- Pipeline scraping : France Travail API + WTTJ + 1-2 sources complémentaires
+- Normalisation, dédup cross-sources, scoring V1 règles pondérées
+- Feed quotidien pré-calculé par profil
+- Interface swipe mobile (PWA) + liste desktop offres sauvegardées
+- Notifications push quotidiennes
+- Dashboard monitoring scraping
+- RGPD : export données, suppression compte
+- **Infra :** VPS Hetzner, Postgres, Docker Compose, Next.js PWA
+
+### Phase 2 — Growth
+
+- App native React Native (Expo) — push fiables iOS, offline
+- Scoring V2 LLM sémantique (Gemini Flash-Lite, Extract & Match)
+- Sources niches sectorielles
+- Partenariats sources (Indeed, WTTJ)
+- Email récap quotidien
+
+### Phase 3 — Expansion
+
+- Multi-pays européen (directive transparence salariale mi-2026)
+- Multi-langue
+- Context caching LLM inter-candidats
 
 ### Stratégie de Mitigation des Risques
 
-**Risques techniques :**
-- Sources scraping fragiles (WTTJ, Station F, pages carrières) → sélecteurs CSS configurables dans `config.ts`, logs explicites par source, isolation des erreurs via `Promise.allSettled`
-- APIs non documentées (WTTJ) → fallback Playwright si l'API interne change
+**Risque #1 — Maintenance scraping (temps de monitoring)**
+Le risque dominant. En développeur unique, chaque heure passée à réparer un scraper est une heure non investie sur le produit.
+- Investir massivement dans l'observabilité dès le MVP — dashboard, alertes automatiques, logs structurés
+- Privilégier les sources stables (France Travail API = zéro maintenance) et les données structurées (LD+JSON)
+- Limiter à 3-4 sources au MVP. Mieux vaut 3 sources fiables que 6 fragiles
+- Scrapers avec sélecteurs configurables et tests de santé automatiques
 
-**Risques d'accès :**
-- Blocage IP par les sites (Indeed, WTTJ) → user-agent réaliste, rate limiting 1-2s entre requêtes, dégradation gracieuse (source désactivée si inaccessible, les autres continuent)
-- OAuth complexe (Gmail API, France Travail) → tokens refresh dans `.env`, documentation setup dans README
+**Risque #2 — Complexité technique pour un dev solo**
+Le MVP combine : LLM, Playwright stealth, Stripe, auth, PWA, pipeline async, Postgres, Docker, VPS ops.
+- Briques éprouvées : Auth.js, Stripe Checkout, BullMQ
+- Docker Compose sur un seul VPS — pas de microservices, pas de Kubernetes
 
-**Risques de qualité des résultats :**
-- Faux positifs → mots-clés négatifs agressifs, seuil de score ajustable, itération sur les poids après les premiers runs réels
-- Doublons non détectés → normalisation stricte (lowercase, trim, suppression suffixes H/F), fenêtre 30 jours configurable
+**Risque #3 — Conversion freemium**
+Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement avant Phase 2.
 
 ## Exigences Fonctionnelles
 
-### Collecte de Données
+### Gestion de Compte & Authentification
 
-- FR1 : Le système peut collecter des offres d'emploi depuis des flux RSS (Indeed, Google Alerts, HelloWork)
-- FR2 : Le système peut collecter des offres via l'API REST France Travail (OAuth2 client_credentials)
-- FR3 : Le système peut collecter des offres depuis WTTJ (API interne ou scraping avec rendu JS)
-- FR4 : Le système peut collecter des offres depuis Station F (scraping HTML statique)
-- FR5 : Le système peut détecter des changements sur les pages carrières d'entreprises configurées (hash diff)
-- FR6 : Le système peut extraire des offres depuis les emails d'alertes LinkedIn reçus dans Gmail
-- FR7 : Le système peut parser des flux RSS 2.0 et Atom de manière générique
-- FR8 : Le système peut respecter un délai configurable entre requêtes HTTP pour éviter les bans
+- FR1 : Le candidat peut créer un compte via email/mot de passe ou OAuth Google
+- FR2 : Le candidat peut se connecter et se déconnecter depuis mobile et desktop
+- FR3 : Le candidat peut démarrer un essai gratuit de 7 jours sans carte bancaire
+- FR4 : Le candidat peut souscrire à un abonnement mensuel (9,90 € ou 19,90 €)
+- FR5 : Le candidat peut gérer son abonnement (upgrade, downgrade, annulation)
+- FR6 : Le candidat peut exporter l'intégralité de ses données personnelles (RGPD)
+- FR7 : Le candidat peut supprimer son compte et toutes ses données (droit à l'oubli)
 
-### Filtrage et Scoring
+### Onboarding & Profil
 
-- FR9 : Le système peut scorer chaque offre selon des mots-clés pondérés par catégorie (poste, tech, contrat, contexte)
-- FR10 : Le système peut appliquer des mots-clés négatifs pour exclure les offres non pertinentes
-- FR11 : Le système peut classifier les offres en 3 niveaux de priorité selon le score (⭐, ⭐⭐, ⭐⭐⭐)
-- FR12 : Le système peut ignorer les offres dont le score est inférieur au seuil configurable
+- FR8 : Le candidat peut uploader son CV (PDF) lors de l'onboarding
+- FR9 : Le système peut extraire les compétences, expérience et localisation du CV via LLM
+- FR10 : Le candidat peut valider et ajuster le profil extrait par le LLM
+- FR11 : Le candidat peut définir ses préférences : type de contrat, fourchette salariale, télétravail, secteurs préférés, périmètre géographique
+- FR12 : Le candidat peut modifier ses préférences et son profil à tout moment
+- FR13 : Le candidat peut ajouter des mots-clés négatifs pour exclure certaines offres
 
-### Dédoublonnage
+### Feed & Découverte d'Offres
 
-- FR13 : Le système peut normaliser les titres et noms d'entreprise (lowercase, trim, suppression suffixes H/F)
-- FR14 : Le système peut identifier les doublons cross-sources via hash titre+entreprise
-- FR15 : Le système peut appliquer une fenêtre temporelle configurable de dédoublonnage (défaut : 30 jours)
+- FR14 : Le candidat peut consulter un feed quotidien d'offres scorées par compatibilité avec son profil
+- FR15 : Le système affiche pour chaque offre : titre, entreprise, salaire, localisation, type de contrat, score de compatibilité, justification courte du score
+- FR16 : Le candidat peut trier les offres par swipe sur mobile (garder, écarter, mettre de côté)
+- FR17 : Le candidat peut consulter ses offres sauvegardées sur la version web desktop
+- FR18 : Le candidat peut accéder à l'offre originale sur le site source via redirection one-tap
+- FR19 : Le candidat peut marquer une offre comme "candidaté"
+- FR20 : Le système logge chaque redirection vers une source (preuve de trafic renvoyé)
 
-### Stockage
+### Notifications & Communication
 
-- FR16 : Le système peut stocker l'historique des offres vues dans une base SQLite locale
-- FR17 : Le système peut stocker les hashs de pages carrières pour la détection de changements
-- FR18 : Le système peut créer automatiquement la base de données et les tables au premier lancement
+- FR21 : Le candidat peut recevoir une notification email quotidienne indiquant le nombre de nouvelles offres à fort match (MVP : email via Resend ; push Web prévu Phase 2)
+- FR22 : Le candidat peut activer ou désactiver les notifications
 
-### Intégration Notion
+### Pipeline de Collecte
 
-- FR19 : Le système peut créer une entrée dans la base Notion pour chaque offre pertinente
-- FR20 : Le système peut renseigner toutes les propriétés Notion (entreprise, poste, contrat, localisation, source, lien, score, priorité, statut par défaut, date relance)
-- FR21 : Le système peut éviter de créer des doublons dans Notion
+- FR23 : Le système peut collecter des offres via l'API officielle France Travail
+- FR24 : Le système peut collecter des métadonnées d'offres depuis WTTJ par scraping
+- FR25 : Le système peut collecter des offres depuis 1-2 sources complémentaires (HelloWork ou autre)
+- FR26 : Le système peut normaliser les offres collectées (titre, entreprise, localisation, salaire, contrat)
+- FR27 : Le système peut dédupliquer les offres cross-sources via hash normalisé
+- FR28 : Le système peut purger les offres expirées automatiquement (rétention courte)
+- FR29 : Le système stocke uniquement les métadonnées des offres, jamais la description complète
+- FR30 : Le système respecte robots.txt et s'arrête si une source bloque techniquement
 
-### Configuration
+### Scoring & Matching
 
-- FR22 : L'utilisateur peut configurer les mots-clés, poids et seuils de scoring dans `config.ts`
-- FR23 : L'utilisateur peut configurer les URLs RSS et pages carrières à surveiller
-- FR24 : L'utilisateur peut configurer les secrets (tokens API) via variables d'environnement `.env`
-- FR25 : L'utilisateur peut activer/désactiver des sources individuellement
+- FR31 : Le système peut scorer chaque offre par rapport à un profil candidat selon des règles pondérées (mots-clés, salaire, localisation, contrat, expérience)
+- FR32 : Le système génère un feed pré-calculé par profil via pipeline batch nocturne
+- FR33 : Le système fournit une justification courte du score pour chaque offre
 
-### Exécution et Modes
+### Dashboard Ops (Admin)
 
-- FR26 : Le système peut s'exécuter en mode cron (one-shot, toutes sources, code retour 0/1)
-- FR27 : Le système peut s'exécuter en mode dry-run (affichage console sans écriture Notion/SQLite)
-- FR28 : Le système peut s'exécuter en mode verbose (logs détaillés)
-- FR29 : Le système peut exécuter toutes les sources en parallèle avec isolation des erreurs
+- FR34 : L'administrateur peut consulter le taux de succès de chaque source de scraping
+- FR35 : L'administrateur reçoit une alerte automatique quand un scraper casse
+- FR36 : L'administrateur peut consulter les logs d'erreur par source avec contexte (sélecteur, URL, code HTTP)
+- FR37 : L'administrateur peut relancer un run de test sur une source depuis le dashboard
+- FR38 : L'administrateur peut consulter les métriques globales (offres collectées/jour, taux de dédup, utilisateurs servis)
 
-### Observabilité
+### Conformité & Juridique
 
-- FR30 : Le système peut logger un résumé par run (offres scannées, filtrées, ajoutées, erreurs par source)
-- FR31 : Le système peut logger les erreurs avec contexte suffisant pour diagnostic (source, sélecteur, URL, code HTTP)
-- FR32 : Le système peut continuer l'exécution même si une ou plusieurs sources échouent
-
-### Tableau de Bord Local
-
-- FR33 : L'utilisateur peut consulter les statistiques des runs (offres par source, par score, par date) via une interface web locale
-- FR34 : L'utilisateur peut visualiser l'historique des offres collectées dans le tableau de bord
-- FR35 : Le tableau de bord peut fonctionner en lecture seule sur la base SQLite existante
+- FR39 : Le système peut traiter une demande de cessation de scraping d'une source dans un délai rapide
+- FR40 : Le système peut désactiver une source de collecte sans impact sur les autres sources
+- FR41 : Le système conserve les logs de redirection comme preuve de loyauté
 
 ## Exigences Non-Fonctionnelles
 
 ### Performance
 
-- NFR1 : Un run complet (toutes sources) doit s'exécuter en moins de 2 minutes
-- NFR2 : Le délai entre requêtes HTTP doit être configurable (défaut : 1-2s) pour respecter le rate limiting sans ralentir excessivement le run
-- NFR3 : Les sources sont exécutées en parallèle pour minimiser le temps total
-- NFR4 : Le tableau de bord local doit se charger en moins de 3 secondes
+- NFR1 : Le feed mobile se charge en < 2s sur connexion 4G
+- NFR2 : First Contentful Paint < 1.5s
+- NFR3 : Time to Interactive < 3s
+- NFR4 : Bundle JS initial < 200 KB gzippé
+- NFR5 : Le pipeline batch nocturne se termine avant 7h
+- NFR6 : Le swipe d'une offre répond en < 300ms
 
 ### Sécurité
 
-- NFR5 : Aucun secret (token, clé API) ne doit être commité dans le code source
-- NFR6 : Les secrets sont stockés exclusivement dans `.env` (local) ou GitHub Secrets (CI)
-- NFR7 : Le fichier `.env` est listé dans `.gitignore`
-- NFR8 : Le tableau de bord local est accessible uniquement sur localhost (pas d'exposition réseau)
+- NFR7 : Données chiffrées en transit (HTTPS/TLS)
+- NFR8 : Données sensibles (CV, profil) chiffrées au repos dans Postgres
+- NFR9 : Mots de passe hashés avec bcrypt ou argon2
+- NFR10 : Tokens de session expirent après inactivité prolongée
+- NFR11 : Paiements délégués à Stripe — aucune donnée bancaire stockée par JobFindeer
+- NFR12 : Secrets (clés API, tokens) jamais exposés côté client ni commités
+
+### Scalabilité
+
+- NFR13 : Architecture supporte une montée à 100 000 MAU sans réécriture fondamentale
+- NFR14 : VPS initial suffit pour 100-500 utilisateurs ; scale-up par migration VPS, pas par changement d'architecture
+- NFR15 : Pipeline scraping découplé du trafic utilisateur
+- NFR16 : Coût opérationnel < 5 €/client/mois payant à toute échelle
+
+### Fiabilité
+
+- NFR17 : Disponibilité > 99% (hors maintenance planifiée)
+- NFR18 : Si une source échoue, les autres continuent (isolation des erreurs)
+- NFR19 : Backup Postgres quotidien des données utilisateur
+- NFR20 : Panne du pipeline n'empêche pas la consultation du feed existant
+
+### Accessibilité
+
+- NFR21 : Conformité WCAG 2.1 AA sur les deux surfaces
+- NFR22 : Zones de tap minimum 44x44px sur mobile
+- NFR23 : Contraste texte/fond ratio 4.5:1 minimum sur les cartes d'offres
+- NFR24 : Navigation clavier complète sur desktop
 
 ### Intégration
 
-- NFR9 : Chaque intégration externe (Notion, Gmail, France Travail) doit gérer les erreurs réseau et les réponses inattendues sans crasher le process
-- NFR10 : Les tokens OAuth (France Travail, Gmail) doivent être rafraîchissables sans redéploiement
-- NFR11 : Le rate limiting de l'API Notion (3 req/s) doit être respecté pour éviter les erreurs 429
-- NFR12 : La base SQLite doit supporter les accès concurrents lecture (tableau de bord) / écriture (run cron) sans corruption
+- NFR25 : API France Travail via OAuth2 client_credentials avec refresh automatique
+- NFR26 : Stripe webhooks pour synchronisation des états d'abonnement (essai → payant → annulé → expiré)
+- NFR27 : LLM (Gemini) via couche d'abstraction permettant de changer de provider
+- NFR28 : Chaque intégration externe gère les erreurs réseau sans crasher le service
+
+### Observabilité
+
+- NFR29 : Logs structurés par run du pipeline (offres collectées, filtrées, dédupliquées, scorées, par source)
+- NFR30 : Alerte automatique si taux de succès d'une source < 50%
+- NFR31 : Error tracking centralisé (Sentry) frontend et backend
+- NFR32 : Métriques business : utilisateurs actifs, taux de swipe positif, taux de redirection

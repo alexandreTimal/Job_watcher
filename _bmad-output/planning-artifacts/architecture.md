@@ -2,12 +2,13 @@
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
 status: 'complete'
-completedAt: '2026-03-30'
+completedAt: '2026-04-09'
+status: 'in-progress'
 inputDocuments: ['prd.md']
 workflowType: 'architecture'
 project_name: 'Job_watcher'
 user_name: 'Alexandre'
-date: '2026-03-30'
+date: '2026-04-09'
 ---
 
 # Architecture Decision Document
@@ -18,83 +19,120 @@ _Ce document se construit collaborativement étape par étape. Les sections sont
 
 ### Vue d'ensemble des Exigences
 
-**Exigences Fonctionnelles (35 FRs) :**
-- Collecte multi-sources (8 FRs) : RSS, API REST, scraping statique/JS, email parsing — chaque source est un module autonome implémentant une interface commune
-- Filtrage et scoring (4 FRs) : scoring pondéré par mots-clés, mots-clés négatifs, classification en 3 priorités, seuil configurable
-- Dédoublonnage (3 FRs) : normalisation titre+entreprise, hash cross-sources, fenêtre temporelle configurable
-- Stockage (3 FRs) : SQLite local, historique offres + hash pages carrières, auto-création DB
-- Intégration Notion (3 FRs) : création entrées, propriétés complètes, anti-doublons Notion
-- Configuration (4 FRs) : mots-clés/poids dans config.ts, URLs, secrets .env, activation/désactivation sources
-- Exécution (4 FRs) : mode cron, dry-run, verbose, parallélisme avec isolation erreurs
-- Observabilité (3 FRs) : résumé par run, logs erreurs contextuels, résilience
-- Tableau de bord local (3 FRs) : stats, historique, lecture seule SQLite
+**Exigences Fonctionnelles (41 FRs) :**
+- Gestion de compte & authentification (7 FRs) : inscription email/OAuth, essai 7 jours, abonnements Stripe, export/suppression RGPD
+- Onboarding & profil (6 FRs) : upload CV, extraction LLM, préférences candidat, mots-clés négatifs
+- Feed & découverte d'offres (7 FRs) : feed quotidien scoré, swipe mobile, archivage desktop, redirection source, logs de redirection
+- Notifications (2 FRs) : push quotidien, opt-in/opt-out
+- Pipeline de collecte (8 FRs) : multi-sources (France Travail API, WTTJ scraping, sources complémentaires), normalisation, dédup, purge, métadonnées uniquement, respect robots.txt
+- Scoring & matching (3 FRs) : scoring règles pondérées par profil, feed pré-calculé batch, justification score
+- Dashboard ops (5 FRs) : monitoring sources, alertes, logs erreur, run de test, métriques globales
+- Conformité & juridique (3 FRs) : cessation de scraping, désactivation source, logs redirection
 
-**Exigences Non-Fonctionnelles (12 NFRs) :**
-- Performance : run < 2 min, parallélisme sources, dashboard < 3s
-- Sécurité : secrets hors code, .env + GitHub Secrets, localhost uniquement pour dashboard
-- Intégration : gestion erreurs réseau, tokens OAuth refresh, rate limiting Notion 3 req/s, concurrence SQLite lecture/écriture
+**Exigences Non-Fonctionnelles (32 NFRs) :**
+- Performance (6 NFRs) : feed < 2s 4G, FCP < 1.5s, TTI < 3s, bundle < 200KB, pipeline avant 7h, swipe < 300ms
+- Sécurité (6 NFRs) : HTTPS, chiffrement au repos, bcrypt/argon2, expiration sessions, Stripe délégué, secrets protégés
+- Scalabilité (4 NFRs) : 100k MAU sans réécriture, VPS scale-up, pipeline découplé, coût < 5€/client/mois
+- Fiabilité (4 NFRs) : 99% uptime, isolation erreurs sources, backup quotidien, feed consultable même si pipeline en panne
+- Accessibilité (4 NFRs) : WCAG 2.1 AA, tap 44x44px, contraste 4.5:1, navigation clavier
+- Intégration (4 NFRs) : France Travail OAuth2, Stripe webhooks, LLM abstrait, gestion erreurs réseau
+- Observabilité (4 NFRs) : logs structurés, alerte source < 50%, Sentry, métriques business
 
-**Échelle & Complexité :**
-- Domaine technique : Backend CLI / Data pipeline
-- Complexité : Moyenne
-- Composants architecturaux estimés : ~12 modules
+### Échelle & Complexité
+
+- **Domaine technique :** Full-stack (backend pipeline + frontend PWA/desktop + ops Docker/VPS)
+- **Complexité :** Élevée — 7 domaines techniques distincts (scraping, LLM, paiement, auth, PWA, pipeline async, ops) à intégrer par un développeur unique
+- **Composants architecturaux estimés :** ~18-22 modules (auth, profil, pipeline, sources×N, scoring, feed, notifications, dashboard ops, admin, API routes, composants UI mobile, composants UI desktop, couche DB, couche LLM, couche Stripe, monitoring)
 
 ### Contraintes Techniques & Dépendances
 
-- Runtime : Node.js 20+ avec TypeScript (tsx pour exécution directe)
-- HTTP : fetch natif (pas d'axios)
-- SQLite : better-sqlite3 (synchrone)
-- RSS : rss-parser ou fast-xml-parser
-- Scraping : Cheerio (statique), Playwright (WTTJ si nécessaire)
-- Pas de framework web pour le script principal
-- Déploiement : GitHub Actions cron avec cache SQLite
+- **Runtime :** Node.js, TypeScript, Next.js standalone (`output: 'standalone'`)
+- **Base de données :** Postgres (multi-tenant, chiffrement au repos)
+- **Infra :** VPS Hetzner, Docker Compose, Caddy reverse proxy
+- **Paiement :** Stripe Checkout + webhooks (aucune donnée bancaire côté serveur)
+- **Auth :** Auth.js (email + OAuth Google)
+- **LLM :** Gemini (via couche d'abstraction provider-agnostic)
+- **Scraping :** Cheerio (HTML statique), Playwright stealth (JS-rendered)
+- **Queue :** BullMQ pour le pipeline batch nocturne
+- **Frontend :** TanStack Query (cache HTTP), PWA manifest, deux layouts mobile/desktop
+- **Monitoring :** Sentry (error tracking), dashboard ops custom
 
 ### Préoccupations Transversales
 
-- Rate limiting : délai configurable entre requêtes HTTP, applicable à toutes les sources
-- Gestion d'erreurs : isolation par source via Promise.allSettled, logging contextuel
-- Logging : structuré par source, timestamp, compteurs par run
-- Configuration : partagée entre sources, filtrage, et orchestrateur
-- Mode dry-run : court-circuite les effets de bord (Notion, SQLite) sans modifier le pipeline
-- Accès concurrentiel SQLite : lecture (dashboard) / écriture (cron) à gérer
+- **Isolation des erreurs :** chaque source de scraping est autonome, `Promise.allSettled` — une source qui casse n'affecte pas les autres
+- **RGPD :** traverse toutes les couches — stockage (chiffrement, minimisation), API (export, suppression), pipeline (métadonnées uniquement, purge), logs (redirection comme preuve)
+- **Contrainte de coût :** < 5 €/client/mois impose des choix d'infra (VPS > cloud managed), de LLM (modèles économiques), et de pipeline (batch > temps réel)
+- **Observabilité :** logs structurés, alertes automatiques, Sentry, métriques business — le monitoring n'est pas un nice-to-have, c'est le risque #1 (maintenance scraping)
+- **Sécurité :** secrets, chiffrement, sessions, HTTPS — standard mais non négociable
+- **Accessibilité :** WCAG 2.1 AA sur les deux surfaces, impacte tous les composants UI
+- **Multi-tenancy :** chaque opération (scoring, feed, préférences) est scoped par utilisateur
 
 ## Évaluation du Starter Template
 
 ### Domaine Technique
 
-CLI Tool / Data pipeline TypeScript — script cron, pas d'interface web pour le script principal (le tableau de bord local est un composant séparé).
+Full-stack TypeScript : Next.js (PWA mobile + desktop) + pipeline batch Node.js (BullMQ workers), avec code partagé (types, DB Drizzle, config).
 
 ### Options Considérées
 
 | Option | Verdict | Raison |
 |---|---|---|
-| oclif / commander | Rejeté | Sur-dimensionné pour un script cron sans CLI interactif |
-| create-t3-app / Next.js | Rejeté | Framework web, pas adapté à un script batch |
-| Yeoman generator | Rejeté | Complexité inutile pour un projet ciblé |
-| Setup manuel TypeScript | **Retenu** | Contrôle total, zéro dépendance superflue, adapté au profil du projet |
+| `create-turbo` (officiel) | Rejeté | Squelette vide — tout à construire, pas de valeur ajoutée |
+| `next-forge` (Vercel) | Rejeté | Très complet mais utilise Prisma, Clerk, ~20 packages. Migration Prisma→Drizzle lourde, trop de code à comprendre et adapter pour un dev solo |
+| `create-t3-turbo` (t3-oss) | **Retenu** | Drizzle natif, tRPC, Tailwind v4, shadcn/ui, Turborepo. Base légère et compréhensible |
+| `turborepo-starter-kit` | Rejeté | Pas de Next.js (Vite + Hono), 8 stars, immature |
 
-### Setup Retenu : Initialisation Manuelle TypeScript
+### Starter Retenu : `create-t3-turbo`
 
-**Rationale :** Le projet est un script cron spécialisé avec des besoins très spécifiques (multi-source scraping, SQLite, Notion API). Aucun starter template n'apporte de valeur — chaque dépendance et chaque module sont choisis individuellement pour couvrir les besoins exacts.
+**Rationale :** Drizzle ORM est déjà intégré, tRPC v11 donne du type-safety end-to-end entre frontend et backend, et la base est suffisamment légère pour qu'un développeur solo comprenne chaque ligne. L'ajout de BullMQ, Stripe et Sentry est incrémental et maîtrisé.
 
-**Commande d'initialisation :**
+**Initialisation :**
 
 ```bash
-npm init -y
-npm install rss-parser better-sqlite3 dotenv
-npm install -D typescript @types/node @types/better-sqlite3 tsx
-npx tsc --init --target es2022 --module nodenext --moduleResolution nodenext --outDir dist --rootDir src --strict true
-mkdir -p src/{sources,filters,notifications,store,utils} data
+git clone https://github.com/t3-oss/create-t3-turbo.git jobfindeer
+cd jobfindeer && pnpm i
 ```
 
-**Décisions techniques fournies par ce setup :**
+**Décisions architecturales fournies par le starter :**
 
-- **Langage & Runtime :** TypeScript strict, Node.js 20+, exécution via tsx (pas de build nécessaire)
-- **Module system :** ESM natif (NodeNext)
-- **Target :** ES2022 (top-level await, etc.)
-- **Pas de bundler :** exécution directe via tsx, pas de Webpack/Vite/Turbopack
-- **Pas de framework de test initial :** tests ajoutés si nécessaire (vitest recommandé)
-- **Linting :** optionnel (ESLint + Prettier à ajouter si souhaité)
+**Langage & Runtime :**
+- TypeScript strict, Node.js 20+
+- ESM natif, Turborepo v2.9+
+
+**Monorepo :**
+- `apps/web` — Next.js 15 (App Router, React 19)
+- `packages/db` — Drizzle ORM + Postgres
+- `packages/api` — tRPC v11 (API type-safe)
+- `packages/ui` — shadcn/ui + Tailwind v4
+- `packages/auth` — better-auth (à remplacer par Auth.js)
+- `packages/validators` — Zod schemas partagés
+
+**Styling :**
+- Tailwind CSS v4 + shadcn/ui pré-configuré
+
+**Build & DX :**
+- Turborepo (cache incrémental, `turbo prune` pour Docker)
+- pnpm workspaces
+- TypeScript project references (intellisense cross-packages)
+
+**Testing :**
+- Non inclus — Vitest à ajouter
+
+**Modifications nécessaires :**
+
+| Modification | Raison |
+|---|---|
+| Remplacer `better-auth` par Auth.js | Adaptateur Drizzle officiel, OAuth Google, aligné avec le PRD |
+| Retirer Expo (`apps/expo`) | App native prévue Phase 2 (React Native), pas Phase 1 |
+| Ajouter `apps/pipeline` | Workers BullMQ (scraping, scoring, feed) — process Node.js séparé |
+| Ajouter `packages/queue` | Config BullMQ partagée, types de jobs, connexion Redis |
+| Ajouter Stripe | Checkout + webhooks dans `apps/web` |
+| Ajouter Sentry | Error tracking frontend + backend + pipeline |
+| Configurer PWA | manifest.json, service worker, mode standalone |
+| Adapter DB de Supabase vers Postgres classique | VPS Hetzner + Docker Compose, pas de Supabase |
+| Ajouter deux layouts Next.js | `(mobile)` et `(desktop)` — deux surfaces distinctes |
+
+**Note :** L'initialisation du projet depuis ce starter sera la première story d'implémentation.
 
 ## Décisions Architecturales
 
@@ -104,332 +142,519 @@ mkdir -p src/{sources,filters,notifications,store,utils} data
 
 | Catégorie | Décision | Choix | Rationale |
 |---|---|---|---|
-| Validation données | Niveau de validation | Validateur centralisé après collecte | Chaque source retourne des `JobOffer` bruts, un validateur unique normalise et vérifie les champs requis — un seul point de contrôle |
-| Arguments CLI | Parsing des flags | `util.parseArgs` natif Node.js 20+ | Zero dépendance, suffisant pour --dry-run, --verbose, --source |
-| Rate limiting | Stratégie | `await sleep(delay)` dans chaque source | Simple, configurable par source, pas besoin de rate limiter centralisé pour 8 sources en parallèle |
-| Retry logic | Gestion des échecs | Pas de retry, log et continue | Le cron 4x/jour compense les échecs ponctuels. La simplicité prime |
-| Dashboard | Framework | Next.js + shadcn/ui + Tailwind | Composants UI prêts à l'emploi, lecture SQLite via API routes |
-| Logs | Destination | Console uniquement | GitHub Actions capture stdout/stderr nativement |
+| Validation données | Stratégie | Zod partout + contraintes DB | Zod catch les erreurs tôt (tRPC, frontend), contraintes DB en filet de sécurité. Pattern natif du starter t3 |
+| Cache | Stratégie | TanStack Query client, pas de cache serveur | Feed pré-calculé en DB, requêtes indexées < 10ms. Redis réservé à BullMQ. Cache serveur ajouté si besoin Phase 2 |
+| Chiffrement | Données sensibles | `pgcrypto` côté Postgres | Chiffrement au niveau des colonnes sensibles (CV, profil extrait). Transparent pour Drizzle via custom column types. Clé dans `.env` |
+| Autorisation | Stratégie | Vérification simple par rôle | Champ `role` (`candidate` \| `admin`), middleware tRPC `protectedProcedure` + `adminProcedure`. Scoping par `user_id` dans chaque requête |
+| Communication services | Next.js ↔ Pipeline | Redis/BullMQ + Postgres | Dashboard enqueue un job BullMQ, pipeline le consomme. Résultats écrits en DB. Pas de serveur HTTP côté pipeline |
+| Retry pipeline | Gestion des échecs | Retry par source avec backoff (BullMQ natif) | 3 tentatives, backoff exponentiel. Config BullMQ, pas de code custom. Échec final → log + alerte dashboard ops |
+| Notifications | MVP | Email uniquement (Resend) | Pas de push au MVP. Email récap quotidien via Resend (3000/mois gratuits, React Email pour templates). Push Web natif prévu Phase 2 |
+| LLM | Couche d'abstraction | Vercel AI SDK (`ai` npm) | Package open-source gratuit, multi-provider. Structured output Zod. Commence avec Gemini Flash, switch de provider en une ligne |
+| Stockage fichiers | CV uploads | Filesystem VPS | Volume Docker `/data/uploads/`, sauvegardé par backup quotidien. Migration S3 si multi-serveurs Phase 2 |
 
 **Décisions importantes (façonnent l'architecture) :**
 
 | Catégorie | Décision | Choix | Rationale |
 |---|---|---|---|
-| Structure projet | Organisation | Monorepo léger : `/src` pour le script cron, `/dashboard` pour le Next.js | Deux entry points séparés, DB SQLite partagée |
-| Dashboard accès DB | Méthode | API routes Next.js lisant SQLite en lecture seule via better-sqlite3 | Pas de serveur séparé, Next.js sert tout |
-| Dashboard démarrage | Commande | `cd dashboard && npm run dev` | Local uniquement, jamais déployé |
+| Containers | Structure Docker | 4 containers Docker Compose | `web` (Next.js), `worker` (BullMQ), `postgres`, `redis`. Caddy reverse proxy + HTTPS Let's Encrypt |
+| CI/CD | Déploiement | GitHub Actions → SSH deploy | Build images → push GHCR → SSH `docker compose pull && up -d`. Secrets dans GitHub Secrets |
+| Monitoring | Observabilité | Logs console + Sentry + métriques Postgres | `docker compose logs` pour debug, Sentry tier gratuit pour error tracking, table `pipeline_runs` pour stats dashboard ops |
+| Feed | Rétention | 7 jours d'offres non traitées | Offres `pending` visibles 7 jours. Swipe → `saved` ou `dismissed`. Offres `saved` sans limite de temps côté desktop |
 
-**Décisions différées :**
+**Décisions différées (Phase 2+) :**
 
 | Décision | Raison du report |
 |---|---|
-| Tests (vitest) | À ajouter quand le pipeline fonctionne |
-| Linting (ESLint + Prettier) | Optionnel, ajout post-fonctionnel |
+| Cache Redis serveur | Postgres suffit au MVP, ajout si latences justifiées |
+| Push notifications (Web Push VAPID) | Email suffit au MVP, push en Phase 2 |
+| Stockage S3 | Filesystem VPS suffit en mono-serveur |
+| Scoring LLM sémantique | Scoring règles pondérées au MVP, LLM sémantique Phase 2 |
+| App native React Native | PWA au MVP, app native Phase 2 |
 
 ### Architecture des Données
 
-- **Schéma SQLite** : 2 tables (`seen_offers`, `page_hashes`) — défini dans le PRD
-- **Validation** : validateur centralisé dans `src/filters/validator.ts` — vérifie les champs requis (title, url, source) et normalise avant le pipeline
-- **Emplacement DB** : `data/job-watcher.db`, partagée entre le script cron et le dashboard (lecture seule côté dashboard)
+- **ORM :** Drizzle ORM + Postgres
+- **Validation :** Zod schemas partagés (`packages/validators`) + contraintes DB
+- **Chiffrement :** `pgcrypto` pour colonnes sensibles (CV, profil), clé dans `.env`
+- **Feed :** table `user_feeds` avec `status` (`pending` | `saved` | `dismissed`), rétention 7 jours pour `pending`, pas de limite pour `saved`
+- **Métriques :** table `pipeline_runs` (source, offres collectées, erreurs, durée, timestamp)
+- **Migrations :** Drizzle Kit (mode `generate` pour review avant apply)
 
 ### Sécurité
 
-- Secrets dans `.env` + `.gitignore`
-- Dashboard accessible uniquement sur `localhost:3000`
-- Pas d'authentification (usage personnel local uniquement)
+- **Auth :** Auth.js (email + OAuth Google), sessions avec expiration
+- **Autorisation :** rôle simple (`candidate` | `admin`), middleware tRPC
+- **Chiffrement transit :** HTTPS via Caddy + Let's Encrypt
+- **Chiffrement repos :** `pgcrypto` colonnes sensibles
+- **Secrets :** `.env` local, GitHub Secrets en CI
+- **Paiements :** Stripe Checkout, aucune donnée bancaire côté serveur
 
 ### Communication & APIs
 
-- **Rate limiting** : `sleep()` configurable par source (défaut 1-2s)
-- **Pas de retry** : le cron 4x/jour compense naturellement les échecs ponctuels
-- **Notion API** : rate limit respecté via `sleep(350ms)` entre requêtes (< 3 req/s)
-- **Gestion erreurs HTTP** : chaque source wrappe ses appels dans try/catch, log l'erreur avec contexte (URL, status code), retourne `[]`
-
-### Tableau de Bord Local
-
-- **Framework** : Next.js + shadcn/ui + Tailwind
-- **Emplacement** : `/dashboard` (sous-projet séparé avec son propre `package.json`)
-- **Accès données** : API routes Next.js → `better-sqlite3` en lecture seule sur `../data/job-watcher.db`
-- **Pages** : stats par source/score/date, liste des offres avec filtres, historique des runs
-- **Non hébergé** : `npm run dev` en local uniquement
+- **API :** tRPC v11 (type-safe end-to-end, pas de routes REST manuelles)
+- **Next.js ↔ Pipeline :** BullMQ comme bus de communication + Postgres comme intermédiaire de données
+- **Gestion erreurs pipeline :** retry BullMQ natif (3 tentatives, backoff exponentiel), `Promise.allSettled` entre sources
+- **Rate limiting scraping :** `sleep()` configurable par source
+- **LLM :** Vercel AI SDK, provider Gemini Flash, structured output Zod
 
 ### Infrastructure & Déploiement
 
-- **Script cron** : GitHub Actions (`0 7,11,15,19 * * 1-5`), persistance DB via `actions/cache`
-- **Logs** : console uniquement (stdout capturé par GitHub Actions)
-- **Dashboard** : local uniquement, jamais déployé
-- **Code retour** : 0 si au moins une source a fonctionné, 1 si toutes ont échoué
+- **VPS :** Hetzner, Docker Compose (4 containers : web, worker, postgres, redis)
+- **Reverse proxy :** Caddy (HTTPS automatique Let's Encrypt)
+- **CI/CD :** GitHub Actions → build images → push GHCR → SSH deploy
+- **Stockage CV :** volume Docker `/data/uploads/`
+- **Backup :** quotidien (Postgres + uploads)
+- **Monitoring :** Sentry (error tracking) + `docker compose logs` + métriques Postgres
 
 ### Analyse d'Impact
 
 **Séquence d'implémentation :**
-1. Types + config + SQLite + logger → fondation
-2. Interface Source + validateur → contrat des modules
-3. Sources RSS → premiers résultats
-4. Filtrage + dédoublonnage → pipeline complet
-5. Notion → output principal
-6. Sources API/scraping → couverture complète
-7. Flags CLI (dry-run, verbose) → modes d'exécution
-8. Dashboard Next.js + shadcn → visualisation
-9. GitHub Actions → déploiement
+1. Init monorepo `create-t3-turbo` + nettoyage (retirer Expo, remplacer better-auth)
+2. Schema Drizzle + migrations + `pgcrypto` setup
+3. Auth.js + rôles + Stripe
+4. Pipeline BullMQ : sources → validation → scoring → dedup → DB
+5. Feed API (tRPC) + interface swipe mobile
+6. Interface desktop (offres sauvegardées)
+7. Dashboard ops (métriques pipeline)
+8. Notifications email (Resend)
+9. LLM onboarding (extraction CV via Vercel AI SDK)
+10. Docker Compose + Caddy + CI/CD GitHub Actions
 
 **Dépendances cross-composants :**
-- Le dashboard dépend de la DB SQLite (doit être créée par le script d'abord)
-- Le validateur est le point de convergence entre toutes les sources et le pipeline
-- La config (`config.ts`) est partagée entre sources, filtrage et orchestrateur
+- `packages/db` (Drizzle) est importé par `apps/web` ET `apps/pipeline`
+- `packages/queue` (BullMQ) est importé par `apps/web` (enqueue) ET `apps/pipeline` (consume)
+- `packages/validators` (Zod) est partagé entre tRPC, pipeline et frontend
+- Le feed dépend du pipeline (doit tourner au moins une fois avant d'avoir du contenu)
+- Stripe webhooks dépendent d'Auth.js (association user ↔ subscription)
 
 ## Patterns d'Implémentation & Règles de Cohérence
 
 ### Points de Conflit Identifiés
 
-8 zones où des agents AI pourraient faire des choix différents si non spécifié.
+12 zones où des agents AI pourraient faire des choix différents si non spécifié.
 
 ### Conventions de Nommage
 
-**Base de données SQLite :**
-- Tables : `snake_case`, pluriel → `seen_offers`, `page_hashes`
-- Colonnes : `snake_case` → `first_seen_at`, `content_hash`
-- Index : `idx_{table}_{column}` → `idx_seen_hash`, `idx_seen_date`
+**Base de données (Drizzle + Postgres) :**
+- Tables : `snake_case`, pluriel → `users`, `user_feeds`, `pipeline_runs`
+- Colonnes : `snake_case` → `user_id`, `created_at`, `content_hash`
+- Index : `idx_{table}_{columns}` → `idx_user_feeds_user_id`
+- Enums Postgres : `snake_case` → `feed_status`, `user_role`
 
 **Code TypeScript :**
-- Fichiers : `kebab-case.ts` → `keyword-filter.ts`, `rss-parser.ts`
-- Interfaces/Types : `PascalCase` → `JobOffer`, `Source`, `FilterResult`
-- Fonctions : `camelCase` → `fetchOffers()`, `calculateScore()`
-- Variables : `camelCase` → `scoreThreshold`, `seenOffers`
-- Constantes globales : `UPPER_SNAKE_CASE` → `KEYWORDS`, `MIN_SCORE`
-- Répertoires : `kebab-case` → `src/sources/`, `src/filters/`
+- Fichiers : `kebab-case.ts` → `keyword-filter.ts`, `cv-extraction.ts`
+- Composants React : `PascalCase.tsx` → `OfferCard.tsx`, `SwipeStack.tsx`
+- Types/Interfaces : `PascalCase` → `JobOffer`, `UserProfile`, `FeedItem`
+- Fonctions : `camelCase` → `calculateScore()`, `extractSkills()`
+- Variables : `camelCase` → `scoreThreshold`, `feedItems`
+- Constantes : `UPPER_SNAKE_CASE` → `MAX_RETRY_COUNT`, `FEED_RETENTION_DAYS`
+- Schemas Zod : `camelCase` + suffixe `Schema` → `createUserSchema`, `updatePreferencesSchema`
 
-**Dashboard (Next.js) :**
-- Composants : `PascalCase` fichier et export → `OfferTable.tsx`
-- API routes : `kebab-case` → `app/api/offers/route.ts`
+**BullMQ Jobs :**
+- Noms de queues : `kebab-case` → `scraping-pipeline`, `email-notifications`
+- Noms de jobs : `kebab-case` → `scrape-wttj`, `score-feeds`, `send-daily-recap`
 
 ### Patterns de Structure
 
-**Organisation des sources :**
-Chaque source exporte une fonction `fetchOffers(): Promise<JobOffer[]>` — même signature, même type de retour.
+**Organisation des composants (par feature, pas par type) :**
+```
+apps/web/src/app/(mobile)/feed/
+  _components/          ← composants spécifiques à cette page
+    OfferCard.tsx
+    SwipeStack.tsx
+  page.tsx
+  loading.tsx
+```
 
-**Organisation des tests (quand ajoutés) :**
-- Co-localisés : `src/sources/indeed-rss.test.ts` à côté de `indeed-rss.ts`
+**Tests (co-localisés) :**
+```
+packages/db/src/
+  schema.ts
+  schema.test.ts        ← à côté du fichier testé
+packages/api/src/
+  routers/feed.ts
+  routers/feed.test.ts
+```
 
-**Config :**
-- `src/config.ts` — configuration métier typée, exportée comme objet
-- `.env` — secrets uniquement, chargés via `dotenv`
+**Sources de scraping (chaque source = un fichier autonome dans le pipeline) :**
+```
+apps/pipeline/src/sources/
+  france-travail.ts     ← exporte une fonction unique
+  wttj.ts
+  hellowork.ts
+```
 
 ### Patterns de Format
 
-**Type `JobOffer` (contrat central) :**
+**Erreurs tRPC (format standard) :**
 ```typescript
-interface JobOffer {
-  title: string;
-  company: string | null;
-  url: string;
-  source: string;          // identifiant source: 'indeed', 'wttj', 'france-travail', etc.
-  location: string | null;
-  contractType: string | null;
-  publishedAt: Date | null;
-  description: string | null;
-}
+throw new TRPCError({
+  code: 'NOT_FOUND',
+  message: 'Offre introuvable',
+});
 ```
 
-Toutes les sources retournent des `JobOffer[]`. Le pipeline en aval ne connaît pas l'origine.
+**Dates :** ISO 8601 partout (`2026-04-09T07:00:00Z`). Postgres stocke en `timestamptz`. Formatage pour l'affichage uniquement côté frontend.
 
-**Logging :**
+**Logging pipeline :**
 ```
-[{timestamp}] [{SOURCE}] {level}: {message}
-[2026-03-30T09:00:12Z] [INDEED] INFO: 23 offres récupérées, 8 après filtrage
-[2026-03-30T09:00:12Z] [WTTJ] ERROR: Selector .job-card not found (status: 200, url: https://...)
+[2026-04-09T07:00:12Z] [WTTJ] INFO: 23 offres collectées, 8 après scoring
+[2026-04-09T07:00:12Z] [FRANCE-TRAVAIL] ERROR: OAuth token expired (status: 401)
 ```
-
-Niveaux : `INFO`, `WARN`, `ERROR`. Pas de `DEBUG` sauf en mode `--verbose`.
-
-**Dates :** ISO 8601 partout (`2026-03-30T09:00:00Z`). SQLite stocke en texte ISO.
+Niveaux : `INFO`, `WARN`, `ERROR`. Pas de `DEBUG` sauf en mode verbose.
 
 ### Patterns de Communication
 
-**Orchestrateur → Sources :**
-- `Promise.allSettled()` — jamais `Promise.all()`
-- Chaque résultat est traité indépendamment (fulfilled = offres, rejected = log erreur)
+**Sources de scraping — contrat uniforme :**
+```typescript
+export interface ScrapingSource {
+  name: string;
+  fetch(): Promise<RawJobOffer[]>;
+}
+```
+Toutes les sources retournent des `RawJobOffer[]`. Le pipeline en aval ne connaît pas l'origine.
 
 **Pipeline séquentiel après collecte :**
 ```
-sources (parallèle) → validateur → scoring → dédoublonnage → Notion
+sources (parallèle via BullMQ jobs) → validation Zod → scoring → dédup → DB → email
 ```
 
-Pas d'événements, pas de pub/sub. Pipeline synchrone et linéaire après la phase de collecte parallèle.
+**Orchestrateur → Sources :**
+- `Promise.allSettled()` — jamais `Promise.all()`
+- Chaque source est un job BullMQ séparé avec ses propres retries
 
 ### Patterns de Gestion d'Erreurs
 
-**Chaque source :**
+**Chaque source de scraping :**
 ```typescript
 try {
-  const offers = await fetchFromSource();
-  logger.info(`[${SOURCE}] ${offers.length} offres récupérées`);
+  const offers = await source.fetch();
+  logger.info(`[${source.name}] ${offers.length} offres collectées`);
   return offers;
 } catch (error) {
-  logger.error(`[${SOURCE}] ${error.message}`, { url, status: error.status });
+  logger.error(`[${source.name}] ${error.message}`, { url, status: error.status });
   return [];
 }
 ```
-
 Règle : une source ne throw jamais vers l'orchestrateur. Elle retourne `[]` en cas d'erreur.
 
-**Mode dry-run :**
-- Le flag `--dry-run` est lu au démarrage et passé dans un objet `context` à travers le pipeline
-- Les fonctions Notion et SQLite vérifient `context.dryRun` et loggent au lieu d'écrire
+**Frontend — Error Boundaries React :**
+- Un Error Boundary par layout (`(mobile)`, `(desktop)`)
+- Les erreurs tRPC sont gérées par TanStack Query (`onError`)
+- Message utilisateur générique, détail technique dans Sentry
+
+**Loading states :**
+- `loading.tsx` de Next.js App Router pour chaque route (skeleton natif)
+- TanStack Query `isPending` / `isError` pour les données async
+- Pas de state de loading global — chaque composant gère le sien
 
 ### Directives pour Agents AI
 
 **OBLIGATOIRE :**
-- Toute nouvelle source DOIT implémenter l'interface `Source` et retourner `JobOffer[]`
-- Toute nouvelle source DOIT wrapper ses appels HTTP dans try/catch et retourner `[]` en cas d'erreur
-- Tout appel HTTP DOIT respecter le délai de rate limiting configuré
-- Les logs DOIVENT suivre le format `[{timestamp}] [{SOURCE}] {level}: {message}`
+- Toute nouvelle source DOIT implémenter l'interface `ScrapingSource`
+- Toute requête DB DOIT être scoped par `user_id` (sauf admin)
+- Tout schema de validation DOIT être dans `packages/validators`
+- Les logs pipeline DOIVENT suivre le format `[timestamp] [SOURCE] level: message`
+- Les composants UI DOIVENT utiliser les composants shadcn/ui existants avant d'en créer
+- Les mutations tRPC DOIVENT invalider les queries TanStack Query concernées
 
 **INTERDIT :**
-- Jamais de `console.log` direct — utiliser le logger
+- Jamais de `console.log` direct — utiliser le logger (pipeline) ou Sentry (frontend)
 - Jamais de secrets en dur dans le code
 - Jamais de `Promise.all()` pour les sources — toujours `Promise.allSettled()`
-- Jamais de mutation de la config à runtime
+- Jamais de SQL brut hors du package `packages/db`
+- Jamais de fetch HTTP direct dans `apps/web` — passer par tRPC
+- Jamais de style inline ou CSS custom — Tailwind uniquement
 
 ## Structure du Projet & Frontières
 
 ### Structure Complète du Répertoire
 
 ```
-job-watcher/
-├── .env.example                    # Template variables d'environnement
+jobfindeer/
+├── .env.example
 ├── .gitignore
-├── package.json
-├── tsconfig.json
-├── README.md
 ├── .github/
 │   └── workflows/
-│       └── job-watcher.yml         # Cron GitHub Actions (4x/jour semaine)
-├── data/
-│   └── job-watcher.db              # SQLite DB (créée au runtime, gitignored)
-├── src/
-│   ├── index.ts                    # Orchestrateur principal (entry point cron)
-│   ├── config.ts                   # Configuration centralisée (mots-clés, URLs, seuils)
-│   ├── types.ts                    # Types partagés (JobOffer, Source, Context, etc.)
-│   ├── sources/
-│   │   ├── indeed-rss.ts           # FR1 — Parser RSS Indeed
-│   │   ├── google-alerts-rss.ts    # FR1 — Parser RSS/Atom Google Alerts
-│   │   ├── hellowork-rss.ts        # FR1 — Parser RSS HelloWork
-│   │   ├── france-travail.ts       # FR2 — API REST France Travail (OAuth2)
-│   │   ├── wttj.ts                 # FR3 — WTTJ (API interne ou Playwright)
-│   │   ├── station-f.ts            # FR4 — Scraper Station F (Cheerio)
-│   │   ├── career-pages.ts         # FR5 — Monitoring pages carrières (hash diff)
-│   │   └── linkedin-email.ts       # FR6 — Parser emails LinkedIn (Gmail API)
-│   ├── filters/
-│   │   ├── validator.ts            # Validation centralisée des JobOffer bruts
-│   │   ├── keyword-filter.ts       # FR9-12 — Scoring pondéré + classification priorité
-│   │   └── dedup.ts                # FR13-15 — Dédoublonnage (hash titre+entreprise)
-│   ├── notifications/
-│   │   └── notion.ts               # FR19-21 — Client Notion API
-│   ├── store/
-│   │   └── sqlite.ts               # FR16-18 — Couche accès SQLite (seen_offers, page_hashes)
-│   └── utils/
-│       ├── rss-parser.ts           # FR7 — Utilitaire parse RSS/Atom générique
-│       ├── html-parser.ts          # Helpers Cheerio
-│       ├── logger.ts               # Logging structuré [timestamp] [SOURCE] level: message
-│       └── sleep.ts                # Utilitaire rate limiting (await sleep(ms))
-└── dashboard/
-    ├── package.json
-    ├── next.config.ts
-    ├── tailwind.config.ts
-    ├── tsconfig.json
-    ├── components.json              # Config shadcn/ui
-    ├── src/
-    │   ├── app/
-    │   │   ├── layout.tsx
-    │   │   ├── page.tsx             # FR33 — Page stats (offres par source/score/date)
-    │   │   ├── offers/
-    │   │   │   └── page.tsx         # FR34 — Liste des offres avec filtres
-    │   │   └── api/
-    │   │       ├── offers/
-    │   │       │   └── route.ts     # API route lecture SQLite → offres
-    │   │       └── stats/
-    │   │           └── route.ts     # API route lecture SQLite → statistiques
-    │   ├── components/
-    │   │   ├── ui/                  # Composants shadcn/ui
-    │   │   ├── OfferTable.tsx       # Table des offres avec tri/filtre
-    │   │   ├── StatsCards.tsx       # Cartes statistiques (offres/jour, par source)
-    │   │   └── ScoreChart.tsx       # Graphique distribution des scores
-    │   └── lib/
-    │       └── db.ts               # FR35 — Connexion SQLite lecture seule (../data/job-watcher.db)
-    └── public/
+│       ├── ci.yml                          # Lint + tests sur PR
+│       └── deploy.yml                      # Build images → GHCR → SSH deploy
+├── docker-compose.yml                      # 4 services : web, worker, postgres, redis
+├── docker-compose.dev.yml                  # Override dev (ports exposés, volumes)
+├── Caddyfile                               # Reverse proxy + HTTPS Let's Encrypt
+├── turbo.json
+├── pnpm-workspace.yaml
+├── package.json
+│
+├── apps/
+│   ├── web/                                # Next.js 15 (App Router, standalone)
+│   │   ├── Dockerfile
+│   │   ├── next.config.ts
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── public/
+│   │   │   ├── manifest.json               # PWA manifest
+│   │   │   ├── sw.js                       # Service worker (PWA)
+│   │   │   └── icons/                      # Icônes PWA
+│   │   └── src/
+│   │       ├── app/
+│   │       │   ├── layout.tsx              # Root layout (providers tRPC, TanStack Query)
+│   │       │   ├── (mobile)/               # Layout mobile-only (375px ref)
+│   │       │   │   ├── layout.tsx
+│   │       │   │   ├── feed/
+│   │       │   │   │   ├── page.tsx        # FR14-16 — Feed swipe quotidien
+│   │       │   │   │   ├── loading.tsx
+│   │       │   │   │   └── _components/
+│   │       │   │   │       ├── OfferCard.tsx
+│   │       │   │   │       └── SwipeStack.tsx
+│   │       │   │   └── onboarding/
+│   │       │   │       ├── page.tsx        # FR8-11 — Upload CV + préférences
+│   │       │   │       ├── loading.tsx
+│   │       │   │       └── _components/
+│   │       │   │           ├── CvUploader.tsx
+│   │       │   │           ├── ProfileReview.tsx
+│   │       │   │           └── PreferencesForm.tsx
+│   │       │   ├── (desktop)/              # Layout desktop-first (1024px+)
+│   │       │   │   ├── layout.tsx
+│   │       │   │   ├── page.tsx            # Landing page marketing (SEO)
+│   │       │   │   ├── offers/
+│   │       │   │   │   ├── page.tsx        # FR17-19 — Offres sauvegardées
+│   │       │   │   │   ├── loading.tsx
+│   │       │   │   │   └── _components/
+│   │       │   │   │       └── OfferTable.tsx
+│   │       │   │   ├── settings/
+│   │       │   │   │   ├── page.tsx        # FR12-13 — Préférences + mots-clés négatifs
+│   │       │   │   │   └── _components/
+│   │       │   │   │       └── PreferencesEditor.tsx
+│   │       │   │   └── billing/
+│   │       │   │       ├── page.tsx        # FR4-5 — Gestion abonnement Stripe
+│   │       │   │       └── _components/
+│   │       │   │           └── SubscriptionManager.tsx
+│   │       │   ├── (auth)/                 # Layout auth (login/register)
+│   │       │   │   ├── login/
+│   │       │   │   │   └── page.tsx        # FR1-2 — Connexion
+│   │       │   │   └── register/
+│   │       │   │       └── page.tsx        # FR1, FR3 — Inscription + essai 7j
+│   │       │   ├── admin/                  # Dashboard ops (protégé role admin)
+│   │       │   │   ├── layout.tsx
+│   │       │   │   ├── page.tsx            # FR34, FR38 — Vue d'ensemble sources + métriques
+│   │       │   │   ├── sources/
+│   │       │   │   │   └── page.tsx        # FR36-37 — Logs erreur + run de test
+│   │       │   │   └── _components/
+│   │       │   │       ├── SourceStatusCard.tsx
+│   │       │   │       ├── PipelineRunsTable.tsx
+│   │       │   │       └── MetricsCharts.tsx
+│   │       │   └── api/
+│   │       │       ├── trpc/[trpc]/
+│   │       │       │   └── route.ts        # Handler tRPC
+│   │       │       ├── stripe/
+│   │       │       │   └── webhook/
+│   │       │       │       └── route.ts    # FR4 — Stripe webhooks (hors tRPC)
+│   │       │       └── auth/[...nextauth]/
+│   │       │           └── route.ts        # Auth.js handler
+│   │       ├── trpc/
+│   │       │   ├── client.ts               # Client tRPC côté browser
+│   │       │   ├── server.ts               # Caller tRPC côté server components
+│   │       │   └── query-client.ts         # Config TanStack Query
+│   │       └── lib/
+│   │           ├── stripe.ts               # Config Stripe client
+│   │           └── uploads.ts              # Gestion upload CV vers filesystem
+│   │
+│   └── pipeline/                           # Workers BullMQ (process Node.js séparé)
+│       ├── Dockerfile
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── src/
+│           ├── index.ts                    # Entry point — démarre les workers
+│           ├── workers/
+│           │   ├── scraping.worker.ts      # Consomme les jobs de scraping
+│           │   ├── scoring.worker.ts       # Calcule les scores par profil
+│           │   ├── feed.worker.ts          # Génère les feeds utilisateurs
+│           │   └── email.worker.ts         # Envoie les emails récap (Resend)
+│           ├── sources/                    # FR23-30 — Sources de scraping
+│           │   ├── france-travail.ts       # FR23 — API officielle (OAuth2)
+│           │   ├── wttj.ts                 # FR24 — Scraping métadonnées
+│           │   ├── hellowork.ts            # FR25 — Source complémentaire
+│           │   └── index.ts               # Registry des sources actives
+│           ├── scoring/
+│           │   ├── rules-engine.ts         # FR31 — Scoring règles pondérées
+│           │   └── justification.ts        # FR33 — Génération justification score
+│           ├── processing/
+│           │   ├── normalizer.ts           # FR26 — Normalisation offres
+│           │   ├── deduplicator.ts         # FR27 — Dédup cross-sources (hash)
+│           │   └── purger.ts              # FR28 — Purge offres expirées
+│           ├── llm/
+│           │   └── cv-extractor.ts         # FR9 — Extraction CV via Vercel AI SDK
+│           └── lib/
+│               ├── logger.ts              # Logger structuré [timestamp] [SOURCE] level
+│               └── sleep.ts               # Rate limiting configurable
+│
+├── packages/
+│   ├── api/                                # tRPC routers
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── root.ts                    # Root router
+│   │       ├── trpc.ts                    # Context, middleware (protectedProcedure, adminProcedure)
+│   │       └── routers/
+│   │           ├── feed.ts                # CRUD feed + swipe
+│   │           ├── offers.ts              # Offres sauvegardées
+│   │           ├── profile.ts             # Profil + préférences
+│   │           ├── auth.ts                # Endpoints auth
+│   │           ├── billing.ts             # Stripe subscription status
+│   │           ├── admin.ts               # Dashboard ops endpoints
+│   │           └── gdpr.ts               # FR6-7 — Export données + suppression compte
+│   │
+│   ├── db/                                 # Drizzle ORM + schema
+│   │   ├── package.json
+│   │   ├── drizzle.config.ts
+│   │   └── src/
+│   │       ├── index.ts                   # Client Drizzle + connexion Postgres
+│   │       ├── schema/
+│   │       │   ├── users.ts               # users, user_roles
+│   │       │   ├── profiles.ts            # user_profiles, user_preferences
+│   │       │   ├── offers.ts              # raw_offers, offer_hashes
+│   │       │   ├── feeds.ts               # user_feeds (status: pending|saved|dismissed)
+│   │       │   ├── pipeline.ts            # pipeline_runs, source_configs
+│   │       │   ├── subscriptions.ts       # stripe_subscriptions, stripe_events
+│   │       │   └── redirections.ts        # redirection_logs (preuve juridique)
+│   │       ├── migrations/                # Fichiers générés par Drizzle Kit
+│   │       └── crypto.ts                  # Custom column types pgcrypto
+│   │
+│   ├── queue/                              # Config BullMQ partagée
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── index.ts                   # Connexion Redis + factory queues
+│   │       ├── queues.ts                  # Définition des queues (scraping-pipeline, email-notifications)
+│   │       └── types.ts                   # Types de jobs (ScrapeJobData, ScoreJobData, etc.)
+│   │
+│   ├── validators/                         # Schemas Zod partagés
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── user.ts                    # createUserSchema, updateProfileSchema
+│   │       ├── preferences.ts             # preferencesSchema, keywordsSchema
+│   │       ├── offer.ts                   # rawJobOfferSchema, feedItemSchema
+│   │       └── admin.ts                   # sourceConfigSchema, testRunSchema
+│   │
+│   ├── auth/                               # Auth.js config
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── index.ts                   # Auth.js setup (providers, adapter Drizzle)
+│   │       └── config.ts                  # Options auth (session, callbacks)
+│   │
+│   ├── email/                              # Templates email (React Email + Resend)
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── client.ts                  # Client Resend
+│   │       └── templates/
+│   │           ├── DailyRecap.tsx          # FR21 — Email récap quotidien
+│   │           └── Welcome.tsx            # Email de bienvenue
+│   │
+│   └── ui/                                 # shadcn/ui + composants partagés
+│       ├── package.json
+│       ├── components.json
+│       └── src/
+│           ├── components/                # Composants shadcn/ui générés
+│           └── styles/
+│               └── globals.css
+│
+└── tooling/                                # Config partagée
+    ├── typescript/                         # tsconfig de base
+    ├── tailwind/                           # Config Tailwind partagée
+    └── eslint/                             # Config ESLint partagée
 ```
 
 ### Frontières Architecturales
 
 **Frontière Sources → Pipeline :**
-- Chaque fichier `src/sources/*.ts` est autonome
-- Contrat : exporte `fetchOffers(): Promise<JobOffer[]>`
-- Ne connaît pas le reste du pipeline (scoring, dédoublonnage, Notion)
+- Chaque fichier `apps/pipeline/src/sources/*.ts` est autonome
+- Contrat : implémente `ScrapingSource` → retourne `RawJobOffer[]`
+- Ne connaît pas le scoring, la dédup, ni le feed
 
-**Frontière Pipeline → Effets de bord :**
-- `src/notifications/notion.ts` et `src/store/sqlite.ts` sont les seuls modules qui écrivent
-- En mode dry-run, ces modules loggent au lieu d'écrire
-- Le pipeline (validator → filter → dedup) est pur : entrée `JobOffer[]`, sortie `JobOffer[]`
+**Frontière Pipeline → Base de données :**
+- Le pipeline écrit via `packages/db` uniquement
+- Les workers n'importent jamais depuis `apps/web`
 
-**Frontière Script Cron → Dashboard :**
-- Communication uniquement via la DB SQLite (`data/job-watcher.db`)
-- Le script cron écrit, le dashboard lit
-- Pas de communication directe entre les deux processus
+**Frontière Web → API :**
+- `apps/web` n'accède jamais à la DB directement
+- Tout passe par tRPC (`packages/api`)
+- Exception : Stripe webhooks et Auth.js handlers (routes API Next.js directes)
+
+**Frontière Web ↔ Pipeline :**
+- Communication uniquement via `packages/queue` (BullMQ) et `packages/db` (Postgres)
+- Pas d'import croisé entre `apps/web` et `apps/pipeline`
 
 ### Mapping Exigences → Structure
 
 | Catégorie FR | Fichiers |
 |---|---|
-| Collecte (FR1-8) | `src/sources/*.ts`, `src/utils/rss-parser.ts`, `src/utils/sleep.ts` |
-| Filtrage (FR9-12) | `src/filters/keyword-filter.ts` |
-| Dédoublonnage (FR13-15) | `src/filters/dedup.ts` |
-| Stockage (FR16-18) | `src/store/sqlite.ts` |
-| Notion (FR19-21) | `src/notifications/notion.ts` |
-| Configuration (FR22-25) | `src/config.ts`, `.env` |
-| Exécution (FR26-29) | `src/index.ts` |
-| Observabilité (FR30-32) | `src/utils/logger.ts`, `src/index.ts` |
-| Dashboard (FR33-35) | `dashboard/` |
+| Auth (FR1-3) | `packages/auth/`, `apps/web/src/app/(auth)/` |
+| Abonnement (FR4-5) | `apps/web/src/app/(desktop)/billing/`, `packages/api/src/routers/billing.ts`, `apps/web/src/app/api/stripe/` |
+| RGPD (FR6-7) | `packages/api/src/routers/gdpr.ts` |
+| Onboarding (FR8-11) | `apps/web/src/app/(mobile)/onboarding/`, `apps/pipeline/src/llm/cv-extractor.ts` |
+| Préférences (FR12-13) | `apps/web/src/app/(desktop)/settings/`, `packages/api/src/routers/profile.ts` |
+| Feed (FR14-16) | `apps/web/src/app/(mobile)/feed/`, `packages/api/src/routers/feed.ts` |
+| Offres desktop (FR17-20) | `apps/web/src/app/(desktop)/offers/`, `packages/db/src/schema/redirections.ts` |
+| Notifications (FR21-22) | `packages/email/`, `apps/pipeline/src/workers/email.worker.ts` |
+| Collecte (FR23-30) | `apps/pipeline/src/sources/`, `apps/pipeline/src/processing/` |
+| Scoring (FR31-33) | `apps/pipeline/src/scoring/`, `apps/pipeline/src/workers/scoring.worker.ts` |
+| Dashboard ops (FR34-38) | `apps/web/src/app/admin/`, `packages/api/src/routers/admin.ts` |
+| Conformité (FR39-41) | `packages/db/src/schema/redirections.ts`, `packages/api/src/routers/admin.ts` |
 
 ### Flux de Données
 
 ```
-[Sources en parallèle] → JobOffer[][] → flat → [Validateur] → JobOffer[]
-  → [Scoring] → ScoredOffer[] → [Dédoublonnage via SQLite] → ScoredOffer[]
-  → [Notion API] → créations dans la base Notion
-  → [Log résumé] → console stdout
+[Pipeline nocturne]
+  Sources (parallèle) → RawJobOffer[] → Normalisation → Validation Zod
+  → Dédup (hash) → DB (raw_offers)
+  → Scoring par profil → DB (user_feeds, status: pending)
+  → Email récap (Resend)
+
+[Consultation utilisateur]
+  Mobile : feed page → tRPC feed.list → Postgres → TanStack Query cache
+  Swipe : tRPC feed.swipe → UPDATE status → invalidate TanStack Query
+  Desktop : offers page → tRPC offers.saved → Postgres
+
+[Admin]
+  Dashboard → tRPC admin.sources → Postgres (pipeline_runs)
+  Test run → tRPC admin.testRun → BullMQ job → Pipeline exécute
 ```
 
 ## Résultats de Validation
 
 ### Validation de Cohérence ✅
 
-**Compatibilité des décisions :**
-- TypeScript + better-sqlite3 + fetch natif + rss-parser + Cheerio : toutes compatibles Node.js 20+
-- ESM (NodeNext) compatible avec tsx, better-sqlite3, et rss-parser
-- Next.js (dashboard) séparé dans `/dashboard` — pas de conflit avec le tsconfig du script cron
+**Compatibilité des technologies :**
+- Stack T3 (tRPC + Drizzle + Zod + TanStack Query) : compatibilité prouvée, écosystème mature
+- BullMQ + Redis : process séparé, pas de conflit avec Next.js
+- Docker Compose (4 containers) + Caddy : architecture standard, aucun conflit
+- Vercel AI SDK + Resend + Stripe : packages npm indépendants
+
+**Clarification :** TanStack Query est inclus via `@trpc/react-query` — pas d'installation séparée nécessaire.
 
 **Cohérence des patterns :**
-- Conventions de nommage cohérentes (snake_case DB, camelCase TS, kebab-case fichiers)
-- Pattern Source → `fetchOffers(): Promise<JobOffer[]>` uniforme sur les 8 sources
-- Logging format uniforme `[timestamp] [SOURCE] level: message`
+- Conventions de nommage cohérentes entre DB (snake_case), TS (camelCase), fichiers (kebab-case), composants (PascalCase)
+- Contrat `ScrapingSource` uniforme sur toutes les sources
+- Gestion d'erreurs stratifiée : sources → `[]`, tRPC → `TRPCError`, frontend → Error Boundary + Sentry
 
 ### Validation Couverture des Exigences ✅
 
-**Couverture FR (35/35) :** Toutes les exigences fonctionnelles ont un fichier assigné dans le mapping structure.
+**Couverture FR : 41/41** — toutes les exigences fonctionnelles ont un emplacement assigné dans la structure.
 
-**Couverture NFR (12/12) :** Performance (parallélisme, sleep configurable), sécurité (.env, localhost), intégration (try/catch, rate limiting Notion, WAL mode SQLite).
+**Couverture NFR : 32/32** — performance (cache client, pipeline batch), sécurité (pgcrypto, HTTPS, Auth.js), scalabilité (VPS scale-up, pipeline découplé), fiabilité (retry BullMQ, isolation sources), accessibilité (shadcn/ui), intégration (couches d'abstraction), observabilité (Sentry, logs, métriques Postgres).
 
 ### Validation Prêt pour Implémentation ✅
 
 - Toutes les décisions critiques documentées avec rationale
 - Arborescence complète avec mapping FR → fichiers
-- Patterns couverts : nommage, structure, format, communication, erreurs, dry-run
+- Patterns couverts : nommage, structure, format, communication, erreurs
+- Directives OBLIGATOIRE/INTERDIT pour agents AI
 
-### Lacunes Mineures (non bloquantes)
+### Lacunes Corrigées
 
-- Activer `PRAGMA journal_mode=WAL` dans `sqlite.ts` pour concurrence lecture/écriture dashboard/cron
-- Définir le type `ScoredOffer` (extension de `JobOffer` avec `score` et `priority`) dans `types.ts`
+1. **Alerte automatique scraper (FR35) :** job BullMQ `check-source-health` après chaque pipeline run → vérifie taux de succès dans `pipeline_runs` → email Resend à l'admin si source < 50%
+2. **Monitoring durée pipeline (NFR5) :** timestamps début/fin dans `pipeline_runs`, alerte si durée > seuil configurable
+3. **Scheduler pipeline nocturne :** BullMQ RepeatableJob (cron natif dans le code, pas d'outil externe)
+4. **Types intermédiaires pipeline :** `RawJobOffer`, `NormalizedOffer`, `ScoredOffer`, `FeedItem` à définir dans `packages/validators/src/offer.ts`
+5. **Backup Postgres :** `pg_dump` quotidien via script cron sur le VPS, stocké dans volume Docker séparé
 
 ### Évaluation Finale
 
@@ -437,12 +662,15 @@ job-watcher/
 **Niveau de confiance :** Élevé
 
 **Points forts :**
-- Architecture pipeline claire et prévisible
-- Isolation forte entre sources (ajout/suppression sans impact)
-- Contrat `JobOffer` central qui découple toutes les couches
-- Mode dry-run intégré dans la conception
+- Architecture monorepo claire avec frontières bien définies
+- Stack T3 éprouvée (tRPC + Drizzle + Zod) — type-safety end-to-end
+- Pipeline découplé du frontend via BullMQ — chacun peut évoluer indépendamment
+- Contrainte de coût respectée (VPS + Docker + services gratuits/économiques)
+- RGPD intégré dans l'architecture (pgcrypto, export, suppression, logs redirection)
 
-**Première priorité d'implémentation :**
-```bash
-npm init -y && npm install rss-parser better-sqlite3 dotenv && npm install -D typescript @types/node @types/better-sqlite3 tsx
-```
+**Améliorations futures (Phase 2+) :**
+- Cache Redis serveur si latences Postgres insuffisantes
+- Push notifications Web Push (VAPID) quand l'email ne suffit plus
+- Stockage S3 si multi-serveurs
+- Scoring LLM sémantique (Gemini → Extract & Match)
+- App native React Native (Expo)

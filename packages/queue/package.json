@@ -1,0 +1,24 @@
+{
+  "name": "@jobfindeer/queue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@jobfindeer/eslint-config": "workspace:*",
+    "@jobfindeer/prettier-config": "workspace:*",
+    "@jobfindeer/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@jobfindeer/prettier-config"
+}

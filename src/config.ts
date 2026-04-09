@@ -53,20 +53,22 @@ export const KEYWORDS = {
   },
 } as const;
 
+// --- URLs de recherche Indeed (via Bright Data Web Unlocker) ---
+
+export const INDEED_SEARCH_URLS = [
+  'https://fr.indeed.com/jobs?q=product+manager+alternance&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=d%C3%A9veloppeur+full+stack+alternance&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=growth+marketing+alternance&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=chef+de+projet+tech+alternance&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=product+manager+stage&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=d%C3%A9veloppeur+full+stack+stage&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=d%C3%A9veloppeur+react+typescript+alternance&l=France&sort=date',
+  'https://fr.indeed.com/jobs?q=stage+fin+%C3%A9tudes+informatique&l=France&sort=date',
+];
+
 // --- URLs RSS ---
 
 export const RSS_URLS = {
-  indeed: [
-    'https://www.indeed.fr/rss?q=product+manager+alternance&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=développeur+full+stack+alternance&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=growth+marketing+alternance&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=chef+de+projet+tech+alternance&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=product+manager+stage&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=développeur+full+stack+stage&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=growth+marketing+stage&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=développeur+react+typescript+alternance&l=France&sort=date',
-    'https://www.indeed.fr/rss?q=stage+fin+études+informatique&l=France&sort=date',
-  ],
   googleAlerts: [
     // URLs RSS Atom à remplir après création manuelle des alertes sur google.com/alerts
     // Chaque alerte génère un flux Atom accessible via l'icône RSS
@@ -123,11 +125,35 @@ export const FRANCE_TRAVAIL = {
 
 export const SCORING = {
   minScore: 3,
+  titleMatchMinScore: 1,  // Seuil abaissé si le titre matche un high_match
+  comboBonus: 3,           // Bonus si title a high_match + contract_match
   priorities: {
     high: { min: 7, label: '⭐⭐⭐' as const },
     medium: { min: 4, label: '⭐⭐' as const },
     low: { min: 3, label: '⭐' as const },
   },
+};
+
+// --- Localisation ---
+
+export const LOCATIONS = {
+  accepted: [
+    'paris', 'lyon', 'remote', 'télétravail', 'full remote',
+    'france', 'île-de-france', 'rhône', 'idf',
+    '75', '69',  // Départements
+  ],
+  bonus: 2,      // +2 si localisation dans la liste
+  penalty: -3,   // -3 si localisation explicitement hors zone (ex: Lille, Marseille)
+  // Villes neutres (pas de penalty) — on n'a pas assez d'info pour pénaliser
+  neutral: true,  // true = pas de penalty si localisation inconnue ou non matchée
+};
+
+// --- Filtre d'expérience ---
+
+export const EXPERIENCE_FILTER = {
+  maxYears: 2,          // Au-delà de 2 ans requis, malus
+  penaltyPerYear: -2,   // -2 par année au-delà du seuil
+  maxPenalty: -8,        // Plafond du malus
 };
 
 // --- Dédoublonnage ---
@@ -146,7 +172,7 @@ export const RATE_LIMIT = {
 // --- Sources activées ---
 
 export const SOURCES_ENABLED: Record<string, boolean> = {
-  indeed: false, // Désactivé — Indeed bloque les headless browsers. Activer avec un proxy résidentiel.
+  indeed: true, // Via Bright Data Web Unlocker API
   'google-alerts': true,
   hellowork: true,
   'france-travail': true,
@@ -166,4 +192,5 @@ export const ENV = {
   GMAIL_CLIENT_ID: process.env.GMAIL_CLIENT_ID ?? '',
   GMAIL_CLIENT_SECRET: process.env.GMAIL_CLIENT_SECRET ?? '',
   GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN ?? '',
+  BRIGHTDATA_API_KEY: process.env.BRIGHTDATA_API_KEY ?? '',
 };

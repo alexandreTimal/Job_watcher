@@ -1,0 +1,7 @@
+{
+  "name": "@jobfindeer/tsconfig",
+  "private": true,
+  "files": [
+    "*.json"
+  ]
+}
