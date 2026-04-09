@@ -20,5 +20,8 @@
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
-  "prettier": "@jobfindeer/prettier-config"
+  "prettier": "@jobfindeer/prettier-config",
+  "dependencies": {
+    "bullmq": "^5.73.3"
+  }
 }

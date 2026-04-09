@@ -10,6 +10,8 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint --flag unstable_native_nodejs_ts_config",
+    "start": "node --import tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -20,5 +22,14 @@
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
-  "prettier": "@jobfindeer/prettier-config"
+  "prettier": "@jobfindeer/prettier-config",
+  "dependencies": {
+    "@jobfindeer/db": "workspace:*",
+    "@jobfindeer/queue": "workspace:*",
+    "@jobfindeer/validators": "workspace:*",
+    "bullmq": "^5.73.3",
+    "cheerio": "^1.2.0",
+    "robots-parser": "^3.0.1",
+    "tsx": "^4.21.0"
+  }
 }
