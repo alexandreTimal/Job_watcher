@@ -1,27 +1,57 @@
-import { Worker } from "bullmq";
+import { Worker, Queue } from "bullmq";
 
 import { redisConnection } from "@jobfindeer/queue";
 import type { ScrapeJobData } from "@jobfindeer/queue";
 
+import { runPipeline, runSingleSource } from "./orchestrator";
 import { createLogger } from "./lib/logger";
 
 const logger = createLogger("PIPELINE");
 
-const worker = new Worker<ScrapeJobData>(
+// Worker for individual source scraping
+const scrapingWorker = new Worker<ScrapeJobData>(
   "scraping-pipeline",
   async (job) => {
-    logger.info(`Processing job ${job.name}`, { source: job.data.sourceName, runId: job.data.runId });
-    // Source workers will be registered in Tasks 11-13
+    if (job.data.sourceName === "__full_pipeline__") {
+      await runPipeline();
+    } else {
+      await runSingleSource(job.data.sourceName);
+    }
   },
-  { connection: redisConnection, concurrency: 3 },
+  { connection: redisConnection, concurrency: 1 },
 );
 
-worker.on("completed", (job) => {
+scrapingWorker.on("completed", (job) => {
   logger.info(`Job completed: ${job.name}`, { id: job.id });
 });
 
-worker.on("failed", (job, err) => {
+scrapingWorker.on("failed", (job, err) => {
   logger.error(`Job failed: ${job?.name}`, { id: job?.id, error: err instanceof Error ? err.message : String(err) });
+});
+
+// Schedule nightly pipeline at 2:00 AM
+const schedulerQueue = new Queue("scraping-pipeline", { connection: redisConnection });
+
+async function setupScheduler() {
+  // Remove existing repeatable jobs to avoid duplicates
+  const existing = await schedulerQueue.getRepeatableJobs();
+  for (const job of existing) {
+    await schedulerQueue.removeRepeatableByKey(job.key);
+  }
+
+  await schedulerQueue.add(
+    "nightly-pipeline",
+    { sourceName: "__full_pipeline__", runId: "" },
+    {
+      repeat: { pattern: "0 2 * * *" }, // Every day at 2:00 AM
+    },
+  );
+
+  logger.info("Nightly scheduler configured (2:00 AM)");
+}
+
+setupScheduler().catch((err) => {
+  logger.error("Failed to setup scheduler", { error: err instanceof Error ? err.message : String(err) });
 });
 
 logger.info("Pipeline worker started");
