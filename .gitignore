@@ -37,3 +37,4 @@ dist/
 
 # data
 data/
+.worktrees/
