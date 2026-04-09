@@ -13,6 +13,7 @@
     "with-env": "dotenv -e ../../.env --"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.61",
     "@jobfindeer/api": "workspace:*",
     "@jobfindeer/auth": "workspace:*",
     "@jobfindeer/db": "workspace:*",
@@ -24,6 +25,7 @@
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "catalog:",
+    "ai": "^6.0.154",
     "next": "^16.0.9",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
