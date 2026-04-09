@@ -5,6 +5,7 @@ import { sourceRegistry } from "./sources/registry";
 import { normalizeOffers } from "./processing/normalizer";
 import { deduplicateAndInsert } from "./processing/deduplicator";
 import { purgeExpiredOffers } from "./processing/purger";
+import { generateFeeds } from "./workers/feed.worker";
 import { createLogger } from "./lib/logger";
 
 const logger = createLogger("ORCHESTRATOR");
@@ -94,6 +95,11 @@ export async function runPipeline(): Promise<void> {
 
   // Purge old offers
   await purgeExpiredOffers();
+
+  // Generate user feeds
+  logger.info("Generating user feeds...");
+  await generateFeeds();
+  logger.info("Feed generation completed");
 }
 
 export async function runSingleSource(sourceName: string): Promise<void> {
