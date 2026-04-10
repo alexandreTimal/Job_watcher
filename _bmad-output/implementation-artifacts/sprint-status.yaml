@@ -83,21 +83,21 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5 : Experience Desktop & Archivage
-  epic-5: backlog
-  5-1-liste-des-offres-sauvegardees-redirection-source: backlog
-  5-2-marquage-candidature-landing-page-marketing: backlog
+  epic-5: done
+  5-1-liste-des-offres-sauvegardees-redirection-source: done
+  5-2-marquage-candidature-landing-page-marketing: done
   epic-5-retrospective: optional
 
   # Epic 6 : Abonnement Stripe & RGPD
-  epic-6: backlog
-  6-1-integration-stripe-checkout-webhooks: backlog
-  6-2-gestion-abonnement-upgrade-downgrade-annulation: backlog
-  6-3-export-donnees-suppression-de-compte-rgpd: backlog
+  epic-6: done
+  6-1-integration-stripe-checkout-webhooks: done
+  6-2-gestion-abonnement-upgrade-downgrade-annulation: done
+  6-3-export-donnees-suppression-de-compte-rgpd: done
   epic-6-retrospective: optional
 
   # Epic 7 : Dashboard Ops, Notifications & Observabilite
-  epic-7: backlog
-  7-1-dashboard-monitoring-sources-metriques: backlog
-  7-2-logs-erreur-alertes-automatiques-run-de-test: backlog
-  7-3-notifications-email-quotidiennes: backlog
+  epic-7: done
+  7-1-dashboard-monitoring-sources-metriques: done
+  7-2-logs-erreur-alertes-automatiques-run-de-test: done
+  7-3-notifications-email-quotidiennes: done
   epic-7-retrospective: optional

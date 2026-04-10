@@ -2,7 +2,14 @@ import type { TRPCRouterRecord } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 
-import { userProfiles, userPreferences } from "@jobfindeer/db/schema";
+import {
+  users,
+  userProfiles,
+  userPreferences,
+  userFeeds,
+  userInteractions,
+  redirectionLogs,
+} from "@jobfindeer/db/schema";
 import {
   preferencesSchema,
   extractedProfileSchema,
@@ -115,4 +122,49 @@ export const profileRouter = {
 
       return { success: true };
     }),
+
+  exportData: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const [profile] = await ctx.db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+
+    const [preferences] = await ctx.db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+
+    const feeds = await ctx.db
+      .select()
+      .from(userFeeds)
+      .where(eq(userFeeds.userId, userId));
+
+    const interactions = await ctx.db
+      .select()
+      .from(userInteractions)
+      .where(eq(userInteractions.userId, userId));
+
+    const redirects = await ctx.db
+      .select()
+      .from(redirectionLogs)
+      .where(eq(redirectionLogs.userId, userId));
+
+    return {
+      profile: profile ?? null,
+      preferences: preferences ?? null,
+      feeds,
+      interactions,
+      redirectionLogs: redirects,
+      exportedAt: new Date().toISOString(),
+    };
+  }),
+
+  deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    // Cascade delete handles: profiles, preferences, feeds, interactions, redirectionLogs, sessions, accounts
+    await ctx.db.delete(users).where(eq(users.id, userId));
+    return { success: true };
+  }),
 } satisfies TRPCRouterRecord;
