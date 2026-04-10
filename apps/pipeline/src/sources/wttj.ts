@@ -1,96 +1,170 @@
-import * as cheerio from "cheerio";
-import robotsParser from "robots-parser";
 import type { RawJobOffer } from "@jobfindeer/validators";
-import type { ScrapingSource } from "../lib/source-interface";
+import type { ScrapingSource, FetchOptions, SearchFilters } from "../lib/source-interface";
+import { launchBrowser } from "../lib/browser";
 import { createLogger } from "../lib/logger";
 
 const logger = createLogger("WTTJ");
 const BASE_URL = "https://www.welcometothejungle.com";
-const SEARCH_URL = `${BASE_URL}/fr/jobs`;
-const ROBOTS_URL = `${BASE_URL}/robots.txt`;
-const USER_AGENT = "JobFindeer/1.0 (job aggregator; contact@jobfindeer.fr)";
-const FETCH_TIMEOUT_MS = 30_000;
+const SEARCH_PATH = "/fr/jobs";
 
-async function checkRobotsTxt(): Promise<boolean> {
-  try {
-    const res = await fetch(ROBOTS_URL, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    if (!res.ok) return true; // Allow if robots.txt unavailable
-    const text = await res.text();
-    const robots = robotsParser(ROBOTS_URL, text);
-    return robots.isAllowed(SEARCH_URL, USER_AGENT) ?? true;
-  } catch {
-    return true;
+const CONTRACT_MAP: Record<string, string> = {
+  cdi: "CDI",
+  cdd: "CDD / Temporaire",
+  interim: "CDD / Temporaire",
+  "intérim": "CDD / Temporaire",
+  stage: "Stage",
+  alternance: "Alternance",
+  freelance: "Freelance",
+  vie: "VIE",
+};
+
+const REMOTE_MAP: Record<string, string[]> = {
+  remote: ["fulltime"],
+  hybrid: ["partial", "hybrid"],
+  onsite: [],
+  any: [],
+};
+
+function buildSearchUrl(page: number, filters?: SearchFilters): string {
+  const params = new URLSearchParams();
+
+  if (filters?.keyword) {
+    params.set("query", filters.keyword);
   }
+
+  if (filters?.contractTypes?.length) {
+    for (const ct of filters.contractTypes) {
+      const mapped = CONTRACT_MAP[ct.toLowerCase()] ?? ct;
+      params.append("refinementList[contract_type_names.fr][]", mapped);
+    }
+  }
+
+  if (filters?.remotePreference && filters.remotePreference !== "any") {
+    const remoteValues = REMOTE_MAP[filters.remotePreference] ?? [];
+    for (const val of remoteValues) {
+      params.append("refinementList[remote][]", val);
+    }
+  }
+
+  params.set("page", String(page));
+
+  return `${BASE_URL}${SEARCH_PATH}?${params.toString()}`;
+}
+
+async function scrapePage(
+  page: Awaited<ReturnType<Awaited<ReturnType<typeof launchBrowser>>["newPage"]>>,
+  url: string,
+): Promise<RawJobOffer[]> {
+  await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+
+  await page.waitForSelector('[data-role="jobs:thumb"]', { timeout: 15_000 }).catch(() => {
+    logger.warn("No job cards found after waiting");
+  });
+
+  const offers = await page.evaluate((baseUrl: string) => {
+    const results: {
+      title: string;
+      company: string | null;
+      location: string | null;
+      salary: string | null;
+      contractType: string | null;
+      urlSource: string;
+    }[] = [];
+
+    const cards = document.querySelectorAll('[data-role="jobs:thumb"]');
+
+    for (const card of cards) {
+      const el = card as HTMLElement;
+
+      const title = el.querySelector("h2")?.textContent?.trim() ?? "";
+      if (!title) continue;
+
+      const href = el.querySelector("a[href*='/jobs/']")?.getAttribute("href");
+      if (!href) continue;
+
+      const company = el.querySelector('[data-testid^="job-thumb-logo-"]')
+        ?.closest("div")?.parentElement
+        ?.querySelector("span")?.textContent?.trim() ?? null;
+
+      let contractType: string | null = null;
+      let location: string | null = null;
+
+      const metaDivs = el.querySelectorAll("svg[alt]");
+      for (const svg of metaDivs) {
+        const alt = svg.getAttribute("alt");
+        const text = svg.closest("div")?.textContent?.trim() ?? "";
+        if (alt === "Contract" && text) contractType = text;
+        if (alt === "Location" && text) location = text;
+      }
+
+      results.push({
+        title,
+        company,
+        location,
+        salary: null,
+        contractType,
+        urlSource: href.startsWith("http") ? href : `${baseUrl}${href}`,
+      });
+    }
+
+    return results;
+  }, BASE_URL);
+
+  return offers.map((o: typeof offers[number]) => ({
+    ...o,
+    sourceName: "wttj" as const,
+    publishedAt: null,
+  }));
 }
 
 export const wttjSource: ScrapingSource = {
   name: "wttj",
 
-  async fetch(): Promise<RawJobOffer[]> {
+  async fetch(options?: FetchOptions): Promise<RawJobOffer[]> {
+    const maxPages = options?.maxPages ?? 3;
+    const limit = options?.limit;
+    const browser = await launchBrowser();
+
     try {
-      const allowed = await checkRobotsTxt();
-      if (!allowed) {
-        logger.warn("Scraping disallowed by robots.txt");
-        return [];
-      }
+      const page = await browser.newPage();
+      const allOffers: RawJobOffer[] = [];
+      const seen = new Set<string>();
 
-      const res = await fetch(SEARCH_URL, {
-        headers: {
-          "User-Agent": USER_AGENT,
-          Accept: "text/html",
-        },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
+      for (let p = 1; p <= maxPages; p++) {
+        const url = buildSearchUrl(p, options?.filters);
+        logger.info(`Scraping page ${p}`, { url });
 
-      if (!res.ok) {
-        logger.error("Page fetch failed", { status: res.status });
-        return [];
-      }
+        const pageOffers = await scrapePage(page, url);
 
-      const html = await res.text();
-      const $ = cheerio.load(html);
-      const offers: RawJobOffer[] = [];
-
-      // WTTJ job listing cards — selectors may change
-      $("[data-testid='search-results-list-item-wrapper']").each((_, el) => {
-        try {
-          const $el = $(el);
-          const titleEl = $el.find("h4, [data-testid='job-title']");
-          const companyEl = $el.find("[data-testid='company-name']");
-          const locationEl = $el.find("[data-testid='job-location']");
-          const contractEl = $el.find("[data-testid='job-contract']");
-          const linkEl = $el.find("a[href*='/jobs/']");
-
-          const title = titleEl.text().trim();
-          const href = linkEl.attr("href");
-
-          if (!title || !href) return;
-
-          offers.push({
-            title,
-            company: companyEl.text().trim() || null,
-            location: locationEl.text().trim() || null,
-            salary: null, // WTTJ rarely shows salary in listing
-            contractType: contractEl.text().trim() || null,
-            urlSource: href.startsWith("http") ? href : `${BASE_URL}${href}`,
-            sourceName: "wttj",
-            publishedAt: null,
-          });
-        } catch (err) {
-          logger.warn("Failed to parse one listing", {
-            selector: "search-results-list-item-wrapper",
-            error: err instanceof Error ? err.message : String(err),
-          });
+        if (pageOffers.length === 0) {
+          logger.info(`No offers on page ${p}, stopping pagination`);
+          break;
         }
-      });
 
-      logger.info(`Collected ${offers.length} offers`);
-      return offers;
+        // Deduplicate by URL
+        for (const offer of pageOffers) {
+          if (!seen.has(offer.urlSource)) {
+            seen.add(offer.urlSource);
+            allOffers.push(offer);
+          }
+        }
+
+        if (limit && allOffers.length >= limit) break;
+
+        // Small delay between pages
+        if (p < maxPages) {
+          await page.waitForTimeout(1500);
+        }
+      }
+
+      const result = limit ? allOffers.slice(0, limit) : allOffers;
+      logger.info(`Collected ${allOffers.length} unique offers, returning ${result.length}`);
+      return result;
     } catch (error) {
       logger.error("Source failed", { error: error instanceof Error ? error.message : String(error) });
       return [];
+    } finally {
+      await browser.close();
     }
   },
 };

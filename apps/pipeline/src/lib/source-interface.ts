@@ -1,7 +1,16 @@
 import type { RawJobOffer } from "@jobfindeer/validators";
 
+export interface SearchFilters {
+  keyword?: string;
+  locations?: { label: string; radius: number | null }[];
+  contractTypes?: string[];
+  remotePreference?: "onsite" | "hybrid" | "remote" | "any";
+}
+
 export interface FetchOptions {
   limit?: number;
+  maxPages?: number;
+  filters?: SearchFilters;
 }
 
 export interface ScrapingSource {

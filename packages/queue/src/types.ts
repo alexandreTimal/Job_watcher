@@ -1,6 +1,7 @@
 export interface ScrapeJobData {
   sourceName: string;
   runId: string;
+  userId?: string;
 }
 
 export interface ScoreJobData {

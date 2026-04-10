@@ -15,7 +15,7 @@ const scrapingWorker = new Worker<ScrapeJobData>(
     if (job.data.sourceName === "__full_pipeline__") {
       await runPipeline();
     } else {
-      await runSingleSource(job.data.sourceName);
+      await runSingleSource(job.data.sourceName, job.data.userId);
     }
   },
   { connection: redisConnection, concurrency: 1 },
