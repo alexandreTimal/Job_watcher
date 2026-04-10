@@ -26,10 +26,14 @@
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "catalog:",
     "ai": "^6.0.154",
+    "bcrypt": "^6.0.0",
+    "drizzle-orm": "^0.44.7",
     "next": "^16.0.9",
+    "next-auth": "5.0.0-beta.30",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
     "superjson": "2.2.3",
+    "unpdf": "^1.4.0",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -37,6 +41,7 @@
     "@jobfindeer/prettier-config": "workspace:*",
     "@jobfindeer/tailwind-config": "workspace:*",
     "@jobfindeer/tsconfig": "workspace:*",
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",

@@ -13,12 +13,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.1",
+    "@jobfindeer/db": "workspace:*",
+    "bcrypt": "^6.0.0",
+    "drizzle-orm": "^0.44.7",
+    "next-auth": "5.0.0-beta.30",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@jobfindeer/eslint-config": "workspace:*",
     "@jobfindeer/prettier-config": "workspace:*",
     "@jobfindeer/tsconfig": "workspace:*",
+    "@types/bcrypt": "^6.0.0",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"

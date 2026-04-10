@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@jobfindeer/ui";
 import { ThemeProvider, ThemeToggle } from "@jobfindeer/ui/theme";
 import { Toaster } from "@jobfindeer/ui/toast";
+import { auth } from "@jobfindeer/auth";
 
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -31,7 +32,9 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
 });
 
-export default function RootLayout(props: { children: React.ReactNode }) {
+export default async function RootLayout(props: { children: React.ReactNode }) {
+  const session = await auth();
+
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
@@ -42,10 +45,41 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         )}
       >
         <ThemeProvider>
+          <nav className="border-b px-6 py-3">
+            <div className="mx-auto flex max-w-6xl items-center justify-between">
+              <a href="/" className="text-lg font-bold">
+                Job<span className="text-primary">Findeer</span>
+              </a>
+              <div className="flex items-center gap-4 text-sm">
+                {session?.user ? (
+                  <>
+                    <a href="/onboarding" className="hover:text-primary">Onboarding</a>
+                    <a href="/feed" className="hover:text-primary">Feed</a>
+                    <a href="/offers" className="hover:text-primary">Offres</a>
+                    <a href="/settings" className="hover:text-primary">Settings</a>
+                    <span className="text-muted-foreground">{session.user.email}</span>
+                    <form action="/api/auth/signout" method="POST">
+                      <button type="submit" className="hover:text-primary">
+                        Déconnexion
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <a href="/login" className="hover:text-primary">Connexion</a>
+                    <a
+                      href="/register"
+                      className="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm font-medium"
+                    >
+                      S&apos;inscrire
+                    </a>
+                  </>
+                )}
+                <ThemeToggle />
+              </div>
+            </div>
+          </nav>
           <TRPCReactProvider>{props.children}</TRPCReactProvider>
-          <div className="absolute right-4 bottom-4">
-            <ThemeToggle />
-          </div>
           <Toaster />
         </ThemeProvider>
       </body>

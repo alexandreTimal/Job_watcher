@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@jobfindeer/auth": "workspace:*",
     "@jobfindeer/db": "workspace:*",
     "@jobfindeer/validators": "workspace:*",
     "@trpc/server": "catalog:",
@@ -29,6 +30,7 @@
     "@jobfindeer/eslint-config": "workspace:*",
     "@jobfindeer/prettier-config": "workspace:*",
     "@jobfindeer/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"

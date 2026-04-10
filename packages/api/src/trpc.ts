@@ -3,6 +3,7 @@ import superjson from "superjson";
 import { z, ZodError } from "zod/v4";
 
 import { db } from "@jobfindeer/db/client";
+import { auth } from "@jobfindeer/auth";
 
 /**
  * 1. CONTEXT
@@ -11,13 +12,14 @@ import { db } from "@jobfindeer/db/client";
  *
  * @see https://trpc.io/docs/server/context
  */
-export const createTRPCContext = (_opts: {
+export const createTRPCContext = async (_opts: {
   headers: Headers;
 }) => {
-  // Auth will be added in Story 1.1
+  const session = await auth();
+
   return {
     db,
-    session: null as null | { user: { id: string } },
+    session,
   };
 };
 
@@ -64,12 +66,15 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
 export const protectedProcedure = t.procedure
   .use(timingMiddleware)
   .use(({ ctx, next }) => {
-    if (!ctx.session?.user) {
+    if (!ctx.session?.user?.id) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
     return next({
       ctx: {
-        session: { ...ctx.session, user: ctx.session.user },
+        session: {
+          ...ctx.session,
+          user: { ...ctx.session.user, id: ctx.session.user.id },
+        },
       },
     });
   });
