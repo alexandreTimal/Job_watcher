@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useCallback } from "react";
 import { useTRPC } from "~/trpc/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Preferences } from "@jobfindeer/validators";
@@ -112,6 +113,173 @@ export default function SettingsPage() {
         onSave={(prefs) => updatePrefs.mutate(prefs)}
         saving={updatePrefs.isPending}
       />
+
+      {/* Pipeline Trigger Section */}
+      <PipelineTrigger />
+    </div>
+  );
+}
+
+type SourceId = "hellowork" | "wttj";
+
+const SOURCES: { id: SourceId; label: string }[] = [
+  { id: "hellowork", label: "HelloWork" },
+  { id: "wttj", label: "Welcome to the Jungle" },
+];
+
+interface SourceResult {
+  source: string;
+  status: "success" | "error";
+  offersCollected: number;
+  offersInserted: number;
+  duplicates: number;
+  durationMs: number;
+  error?: string;
+}
+
+function PipelineTrigger() {
+  const [selected, setSelected] = useState<Set<SourceId>>(
+    new Set(["hellowork", "wttj"]),
+  );
+  const [running, setRunning] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [results, setResults] = useState<SourceResult[]>([]);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  function toggle(id: SourceId) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handleStart() {
+    setRunning(true);
+    setLogs([]);
+    setResults([]);
+
+    const params = new URLSearchParams();
+    for (const s of selected) {
+      params.append("source", s);
+    }
+
+    const es = new EventSource(`/api/pipeline/run?${params.toString()}`);
+
+    es.addEventListener("log", (e) => {
+      const msg = JSON.parse(e.data) as string;
+      setLogs((prev) => [...prev, msg]);
+      setTimeout(scrollToBottom, 50);
+    });
+
+    es.addEventListener("result", (e) => {
+      const result = JSON.parse(e.data) as SourceResult;
+      setResults((prev) => [...prev, result]);
+    });
+
+    es.addEventListener("done", () => {
+      setRunning(false);
+      es.close();
+    });
+
+    es.onerror = () => {
+      setRunning(false);
+      es.close();
+    };
+  }
+
+  return (
+    <div className="mt-10">
+      <h2 className="mb-4 text-xl font-bold">Lancer le scraping</h2>
+      <div className="rounded-lg border p-6">
+        <div className="mb-4 flex gap-4">
+          {SOURCES.map((s) => (
+            <label key={s.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selected.has(s.id)}
+                onChange={() => toggle(s.id)}
+                disabled={running}
+                className="accent-primary h-4 w-4 rounded"
+              />
+              {s.label}
+            </label>
+          ))}
+        </div>
+
+        <button
+          disabled={selected.size === 0 || running}
+          onClick={handleStart}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {running ? "Scraping en cours..." : "Lancer le scraping"}
+        </button>
+
+        {/* Live logs */}
+        {logs.length > 0 && (
+          <div className="bg-muted mt-4 max-h-64 overflow-y-auto rounded-md p-3 font-mono text-xs">
+            {logs.map((line, i) => (
+              <div
+                key={i}
+                className={
+                  line.includes("[stderr]")
+                    ? "text-red-500"
+                    : line.includes("completed") || line.includes("Collected")
+                      ? "text-green-600"
+                      : "text-muted-foreground"
+                }
+              >
+                {line}
+              </div>
+            ))}
+            <div ref={logsEndRef} />
+          </div>
+        )}
+
+        {/* Results per source */}
+        {results.length > 0 && (
+          <div className="mt-4 space-y-3">
+            {results.map((r) => {
+              const label =
+                SOURCES.find((s) => s.id === r.source)?.label ?? r.source;
+              return (
+                <div key={r.source} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{label}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        r.status === "success"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {r.status === "success" ? "Termine" : "Echoue"}
+                    </span>
+                  </div>
+
+                  {r.status === "success" && (
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      {r.offersCollected} offres collectees,{" "}
+                      {r.offersInserted} nouvelles inserees,{" "}
+                      {r.duplicates} doublons ignores
+                      {` — ${(r.durationMs / 1000).toFixed(1)}s`}
+                    </p>
+                  )}
+
+                  {r.status === "error" && r.error && (
+                    <p className="mt-1 text-sm text-red-600">{r.error}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
