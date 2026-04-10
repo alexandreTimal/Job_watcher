@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "JobFindeer — Ta veille emploi intelligente",
   description:
-    "JobFindeer agrège les offres de France Travail, WTTJ et HelloWork, les score par compatibilité avec ton profil et te les présente chaque matin. Essai gratuit 7 jours.",
+    "JobFindeer agrège les offres de France Travail, WTTJ et HelloWork, les score par compatibilité avec ton profil et te les présente chaque matin. 100% gratuit.",
   openGraph: {
     title: "JobFindeer — Ta veille emploi intelligente",
     description: "Reçois chaque matin les offres d'emploi qui te correspondent vraiment.",
@@ -28,9 +28,9 @@ export default function HomePage() {
           un feed mobile prêt à swiper.
         </p>
         <div className="flex gap-4">
-          <a href="/api/auth/signin">
+          <a href="/register">
             <Button size="lg" className="min-h-[44px] px-8 text-lg">
-              Essai gratuit 7 jours
+              Commencer gratuitement
             </Button>
           </a>
         </div>
@@ -64,10 +64,10 @@ export default function HomePage() {
       {/* CTA */}
       <section className="flex flex-col items-center gap-4 px-6 py-16 text-center">
         <h2 className="text-2xl font-bold">Prêt à trouver ton prochain poste ?</h2>
-        <p className="text-muted-foreground">7 jours gratuits, sans carte bancaire.</p>
-        <a href="/api/auth/signin">
+        <p className="text-muted-foreground">100% gratuit. Crée ton compte en 30 secondes.</p>
+        <a href="/register">
           <Button size="lg" className="min-h-[44px]">
-            Commencer gratuitement
+            Créer mon compte
           </Button>
         </a>
       </section>
