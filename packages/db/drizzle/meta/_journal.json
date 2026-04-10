@@ -15,6 +15,13 @@
       "when": 1775858892527,
       "tag": "0001_oval_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775859320878,
+      "tag": "0002_classy_celestials",
+      "breakpoints": true
     }
   ]
 }

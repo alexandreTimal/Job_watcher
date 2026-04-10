@@ -1,6 +1,15 @@
-import { pgTable, text, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { users } from "./auth";
+import { rawOffers } from "./offers";
 
 export const userProfiles = pgTable("user_profiles", {
   id: text("id")
@@ -21,6 +30,13 @@ export const userProfiles = pgTable("user_profiles", {
   languages: jsonb("languages").$type<{ name: string; level: string | null }[]>().default([]),
   educationLevel: text("education_level"),
   rawExtraction: jsonb("raw_extraction"),
+  // Onboarding v3 fields
+  branch: text("branch", {
+    enum: ["1", "2", "3", "4", "5"],
+  }),
+  freeTextRaw: text("free_text_raw"),
+  calibrationAnswers: jsonb("calibration_answers"),
+  currentEmployer: text("current_employer"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
@@ -39,9 +55,24 @@ export const userPreferences = pgTable("user_preferences", {
   remotePreference: text("remote_preference", {
     enum: ["onsite", "hybrid", "remote", "any"],
   }).default("any"),
+  // Legacy — kept to avoid destructive migration, unused in app code
   sectors: jsonb("sectors").$type<string[]>().default([]),
-  locations: jsonb("locations").$type<{ label: string; radius: number | null }[]>().default([]),
   negativeKeywords: jsonb("negative_keywords").$type<string[]>().default([]),
+  // Onboarding v3 fields
+  locationMode: text("location_mode", {
+    enum: ["cities", "france", "remote_only"],
+  }).default("cities"),
+  cities: jsonb("cities")
+    .$type<{ name: string; lat: number; lng: number; radius_km: number }[]>()
+    .default([]),
+  defaultRadiusKm: integer("default_radius_km").default(25),
+  remoteFriendly: boolean("remote_friendly").default(false),
+  locations: jsonb("locations")
+    .$type<{ label: string; radius: number | null }[]>()
+    .default([]),
+  workSchedule: text("work_schedule", {
+    enum: ["full_time", "part_time", "any"],
+  }).default("any"),
   notificationsEnabled: text("notifications_enabled", {
     enum: ["true", "false"],
   })
@@ -50,3 +81,26 @@ export const userPreferences = pgTable("user_preferences", {
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
+
+export const userInteractions = pgTable(
+  "user_interactions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    offerId: text("offer_id")
+      .notNull()
+      .references(() => rawOffers.id, { onDelete: "cascade" }),
+    eventType: text("event_type", {
+      enum: ["impression", "click", "save", "dismiss", "apply"],
+    }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_user_interactions_user").on(table.userId),
+    index("idx_user_interactions_offer").on(table.offerId),
+  ],
+);

@@ -66,9 +66,9 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3 : Onboarding Candidat & Profil (refondu — change proposal 2026-04-10)
-  epic-3: backlog
-  3-1-schema-profil-enrichi-localisation-multi-mode-interactions: backlog
-  3-2-upload-cv-extraction-llm: backlog
+  epic-3: in-progress
+  3-1-schema-profil-enrichi-localisation-multi-mode-interactions: done
+  3-2-upload-cv-extraction-llm: done
   3-3-texte-libre-conversationnel-analyse-intention-llm: backlog
   3-4-socle-commun-calibrage-par-branche: backlog
   3-5-modification-preferences-post-onboarding: backlog
