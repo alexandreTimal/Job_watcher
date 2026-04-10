@@ -13,12 +13,18 @@ export function ProfileReview({
   profile: ExtractedProfile;
   onConfirm: (profile: ExtractedProfile) => void;
 }) {
-  const [skills, setSkills] = useState(profile.skills.join(", "));
+  // Handle both schema fields and raw model output (hard_skills, titre_actuel, etc.)
+  const raw = profile as Record<string, unknown>;
+  const initialSkills = (raw.skills as string[]) ?? (raw.hard_skills as string[]) ?? [];
+  const initialSoftSkills = (raw.soft_skills as string[]) ?? [];
+  const allSkills = [...initialSkills, ...initialSoftSkills];
+
+  const [skills, setSkills] = useState(allSkills.join(", "));
   const [experienceYears, setExperienceYears] = useState(
-    profile.experienceYears?.toString() ?? "",
+    (raw.experienceYears ?? raw.annees_experience_totales ?? "")?.toString() ?? "",
   );
-  const [location, setLocation] = useState(profile.currentLocation ?? "");
-  const [title, setTitle] = useState(profile.currentTitle ?? "");
+  const [location, setLocation] = useState((raw.currentLocation ?? raw.localisation ?? "") as string);
+  const [title, setTitle] = useState((raw.currentTitle ?? raw.titre_actuel ?? "") as string);
 
   function handleConfirm() {
     onConfirm({
