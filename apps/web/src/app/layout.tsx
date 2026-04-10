@@ -7,6 +7,7 @@ import { Toaster } from "@jobfindeer/ui/toast";
 import { auth } from "@jobfindeer/auth";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { SignOutButton } from "~/app/_components/SignOutButton";
 
 import "~/app/styles.css";
 
@@ -58,11 +59,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
                     <a href="/offers" className="hover:text-primary">Offres</a>
                     <a href="/settings" className="hover:text-primary">Settings</a>
                     <span className="text-muted-foreground">{session.user.email}</span>
-                    <form action="/api/auth/signout" method="POST">
-                      <button type="submit" className="hover:text-primary">
-                        Déconnexion
-                      </button>
-                    </form>
+                    <SignOutButton />
                   </>
                 ) : (
                   <>

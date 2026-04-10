@@ -3,11 +3,17 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { extractText } from "unpdf";
 
+import { auth } from "@jobfindeer/auth";
 import { extractProfileFromCV } from "~/lib/extract-cv";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "/data/uploads";
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
   const formData = await request.formData();
   const file = formData.get("cv") as File | null;
   const modelId = (formData.get("model") as string) || "gemini-2.5-flash";

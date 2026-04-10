@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
-import { extractedProfileSchema, type ExtractedProfile } from "@jobfindeer/validators";
+import { z } from "zod/v4";
+import { type ExtractedProfile } from "@jobfindeer/validators";
 
 // Pricing per 1M tokens (USD)
 const MODEL_CONFIG: Record<string, { label: string; pricing: { input: number; output: number } }> = {
@@ -116,7 +117,31 @@ ${cvText}
     throw new Error(`Empty response from model (finishReason: ${result.finishReason})`);
   }
   const rawJson: unknown = JSON.parse(text);
-  const profile = rawJson as ExtractedProfile | null;
+
+  // Transform LLM output (French field names) → ExtractedProfile (English schema)
+  const llmOutputSchema = z.object({
+    titre_actuel: z.string().nullable().optional(),
+    localisation: z.string().nullable().optional(),
+    annees_experience_totales: z.number().int().nullable().optional(),
+    hard_skills: z.array(z.string()).optional().default([]),
+    soft_skills: z.array(z.string()).optional().default([]),
+  });
+
+  const llmParsed = llmOutputSchema.safeParse(rawJson);
+  let profile: ExtractedProfile | null;
+
+  if (llmParsed.success) {
+    const d = llmParsed.data;
+    profile = {
+      skills: [...d.hard_skills, ...d.soft_skills],
+      experienceYears: d.annees_experience_totales ?? null,
+      currentLocation: d.localisation ?? null,
+      currentTitle: d.titre_actuel ?? null,
+    };
+  } else {
+    console.warn("[EXTRACT] LLM output did not match expected schema:", llmParsed.error.message);
+    profile = null;
+  }
 
   const usage = result.usage as Record<string, unknown> | undefined;
   console.log("[EXTRACT] raw usage:", JSON.stringify(usage));
