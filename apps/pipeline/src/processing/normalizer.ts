@@ -24,6 +24,23 @@ function computeHash(titleNorm: string, companyNorm: string | null, source: stri
   return createHash("sha256").update(input).digest("hex");
 }
 
+function detectRemoteType(
+  title: string,
+  location: string | null,
+): "on_site" | "hybrid" | "full_remote" | null {
+  const text = `${title} ${location ?? ""}`.toLowerCase();
+  if (/\b(full[\s-]?remote|100%?\s*remote|teletravail\s*complet)\b/i.test(text)) {
+    return "full_remote";
+  }
+  if (/\b(hybrid|hybride|teletravail\s*partiel|remote\s*partiel)\b/i.test(text)) {
+    return "hybrid";
+  }
+  if (/\b(sur\s*site|on[\s-]?site|presentiel|présentiel)\b/i.test(text)) {
+    return "on_site";
+  }
+  return null;
+}
+
 export function normalizeOffers(rawOffers: RawJobOffer[]): NormalizedOffer[] {
   const results: NormalizedOffer[] = [];
 

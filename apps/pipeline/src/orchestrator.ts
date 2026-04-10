@@ -6,6 +6,7 @@ import { sourceRegistry } from "./sources/registry";
 import { normalizeOffers } from "./processing/normalizer";
 import { deduplicateAndInsert } from "./processing/deduplicator";
 import { purgeExpiredOffers } from "./processing/purger";
+import { geocodeNewOffers } from "./processing/geocoder";
 import { generateFeeds } from "./workers/feed.worker";
 import { createLogger } from "./lib/logger";
 
@@ -181,6 +182,9 @@ export async function runPipeline(): Promise<void> {
   });
 
   await purgeExpiredOffers();
+
+  logger.info("Geocoding new offers...");
+  await geocodeNewOffers();
 
   logger.info("Generating user feeds...");
   await generateFeeds();

@@ -1,5 +1,8 @@
 import { z } from "zod/v4";
 
+export const remoteTypeEnum = z.enum(["on_site", "hybrid", "full_remote"]);
+export const companySizeEnum = z.enum(["startup", "pme", "eti", "grand_groupe"]);
+
 export const rawJobOfferSchema = z.object({
   title: z.string().min(1),
   company: z.string().nullable(),
@@ -9,6 +12,12 @@ export const rawJobOfferSchema = z.object({
   urlSource: z.url(),
   sourceName: z.string().min(1),
   publishedAt: z.coerce.date().nullable(),
+  locationLat: z.number().nullable().optional(),
+  locationLng: z.number().nullable().optional(),
+  remoteType: remoteTypeEnum.nullable().optional(),
+  requiredExperienceYears: z.number().int().nonnegative().nullable().optional(),
+  companySize: companySizeEnum.nullable().optional(),
+  descriptionRaw: z.string().nullable().optional(),
 });
 
 export type RawJobOffer = z.infer<typeof rawJobOfferSchema>;

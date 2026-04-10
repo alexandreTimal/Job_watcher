@@ -56,13 +56,13 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2 : Pipeline de Collecte & Traitement des Offres (enrichi — geocodage, remote_type, experience_years, description_raw)
-  epic-2: backlog
-  2-1-structure-pipeline-bullmq-schema-offres-enrichi: backlog
-  2-2-source-france-travail-api-officielle: backlog
-  2-3-source-wttj-scraping-metadonnees: backlog
-  2-4-source-complementaire-hellowork: backlog
-  2-5-normalisation-deduplication-purge: backlog
-  2-6-orchestrateur-pipeline-scheduler-nocturne: backlog
+  epic-2: done
+  2-1-structure-pipeline-bullmq-schema-offres-enrichi: done
+  2-2-source-france-travail-api-officielle: done
+  2-3-source-wttj-scraping-metadonnees: done
+  2-4-source-complementaire-hellowork: done
+  2-5-normalisation-deduplication-purge: done
+  2-6-orchestrateur-pipeline-scheduler-nocturne: done
   epic-2-retrospective: optional
 
   # Epic 3 : Onboarding Candidat & Profil (refondu — change proposal 2026-04-10)

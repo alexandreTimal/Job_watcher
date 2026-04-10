@@ -1,6 +1,7 @@
 import {
   index,
   pgTable,
+  real,
   text,
   timestamp,
   integer,
@@ -33,6 +34,16 @@ export const rawOffers = pgTable(
     contractType: text("contract_type"),
     urlSource: text("url_source").notNull(),
     sourceName: text("source_name").notNull(),
+    locationLat: real("location_lat"),
+    locationLng: real("location_lng"),
+    remoteType: text("remote_type", {
+      enum: ["on_site", "hybrid", "full_remote"],
+    }),
+    requiredExperienceYears: integer("required_experience_years"),
+    companySize: text("company_size", {
+      enum: ["startup", "pme", "eti", "grand_groupe"],
+    }),
+    descriptionRaw: text("description_raw"),
     publishedAt: timestamp("published_at", { mode: "date" }),
     expiresAt: timestamp("expires_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),

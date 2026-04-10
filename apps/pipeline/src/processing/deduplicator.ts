@@ -34,6 +34,12 @@ export async function deduplicateAndInsert(
       urlSource: offer.urlSource,
       sourceName: offer.sourceName,
       publishedAt: offer.publishedAt,
+      locationLat: (offer as Record<string, unknown>).locationLat as number | undefined,
+      locationLng: (offer as Record<string, unknown>).locationLng as number | undefined,
+      remoteType: (offer as Record<string, unknown>).remoteType as string | undefined,
+      requiredExperienceYears: (offer as Record<string, unknown>).requiredExperienceYears as number | undefined,
+      companySize: (offer as Record<string, unknown>).companySize as string | undefined,
+      descriptionRaw: (offer as Record<string, unknown>).descriptionRaw as string | undefined,
     });
 
     inserted++;
