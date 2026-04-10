@@ -37,4 +37,12 @@ dist/
 
 # data
 data/
+uploads/
 .worktrees/
+
+# ide
+.vscode/
+.idea/
+
+# benchmarks
+benchmark/
