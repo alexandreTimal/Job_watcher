@@ -54,7 +54,16 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      {step === "upload" && <CvUpload onExtracted={handleExtracted} />}
+      {step === "upload" && (
+        <>
+          <CvUpload onExtracted={handleExtracted} />
+          <RawJsonBypass onLoad={(profile) => {
+            setExtraction(profile);
+            setMetrics(null);
+            setStep("review");
+          }} />
+        </>
+      )}
       {step === "review" && extraction && (
         <>
           <ProfileReview profile={extraction} onConfirm={handleProfileConfirm} />
@@ -63,6 +72,58 @@ export default function OnboardingPage() {
       )}
       {step === "preferences" && <PreferencesForm onSave={handlePreferencesSave} />}
     </div>
+  );
+}
+
+function RawJsonBypass({ onLoad }: { onLoad: (profile: ExtractedProfile) => void }) {
+  const [json, setJson] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function handleLoad() {
+    try {
+      const parsed = JSON.parse(json);
+      // Accept both LLM raw output (snake_case) and ExtractedProfile format
+      const profile: ExtractedProfile = {
+        currentTitle: parsed.currentTitle ?? parsed.current_title ?? null,
+        currentLocation: parsed.currentLocation ?? parsed.location ?? null,
+        experienceYears: parsed.experienceYears ?? parsed.experience_years ?? null,
+        hardSkills: parsed.hardSkills ?? parsed.hard_skills ?? [],
+        softSkills: parsed.softSkills ?? parsed.soft_skills ?? [],
+        languages: parsed.languages ?? [],
+        educationLevel: parsed.educationLevel ?? parsed.education_level ?? null,
+        workHistory: parsed.workHistory ?? parsed.work_history ?? [],
+        education: parsed.education ?? [],
+        certifications: parsed.certifications ?? [],
+      };
+      setError(null);
+      onLoad(profile);
+    } catch {
+      setError("JSON invalide");
+    }
+  }
+
+  return (
+    <details className="mt-6 rounded-lg border p-4">
+      <summary className="text-muted-foreground cursor-pointer text-sm font-medium">
+        Dev : charger un JSON brut (bypass IA)
+      </summary>
+      <div className="mt-3 flex flex-col gap-2">
+        <textarea
+          value={json}
+          onChange={(e) => setJson(e.target.value)}
+          placeholder='Colle ici le JSON raw d extraction (format LLM ou ExtractedProfile)'
+          className="border-input bg-background w-full resize-y rounded border p-2 font-mono text-xs"
+          rows={8}
+        />
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <button
+          onClick={handleLoad}
+          className="bg-muted hover:bg-muted/80 rounded px-3 py-1.5 text-xs font-medium"
+        >
+          Charger ce profil
+        </button>
+      </div>
+    </details>
   );
 }
 

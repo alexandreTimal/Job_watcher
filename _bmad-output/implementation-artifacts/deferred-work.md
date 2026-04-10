@@ -9,3 +9,7 @@
 - Aucun test unitaire pour validators, queue, pipeline, sources
 - `z.coerce.date().nullable()` accepte des dates invalides (Invalid Date passe la validation)
 - `score` sans bornes dans `feedItemSchema` — accepte négatifs et valeurs extrêmes
+
+## Deferred from: spec-refacto-preferences-form-ux (2026-04-10)
+
+- Mobile `PreferencesForm.tsx` utilise encore un input texte libre pour la localisation au lieu du `LocationPicker` avec Google Places. Le mapping données est correct (`locations[]`) mais l'UX reste legacy.

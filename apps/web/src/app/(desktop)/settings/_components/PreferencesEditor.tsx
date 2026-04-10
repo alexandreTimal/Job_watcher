@@ -6,6 +6,9 @@ import { Input } from "@jobfindeer/ui/input";
 import { Label } from "@jobfindeer/ui/label";
 import type { Preferences } from "@jobfindeer/validators";
 import { NegativeKeywords } from "./NegativeKeywords";
+import { MultiSelect } from "./MultiSelect";
+import { LocationPicker } from "./LocationPicker";
+import { CONTRACT_TYPES } from "./constants";
 
 export function PreferencesEditor({
   initial,
@@ -26,16 +29,12 @@ export function PreferencesEditor({
       }}
       className="flex flex-col gap-4"
     >
-      <div>
-        <Label htmlFor="contract">Types de contrat</Label>
-        <Input
-          id="contract"
-          value={prefs.contractTypes.join(", ")}
-          onChange={(e) =>
-            setPrefs({ ...prefs, contractTypes: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
-          }
-        />
-      </div>
+      <MultiSelect
+        label="Types de contrat"
+        options={CONTRACT_TYPES}
+        selected={prefs.contractTypes}
+        onChange={(contractTypes) => setPrefs({ ...prefs, contractTypes })}
+      />
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label htmlFor="salMin">Salaire min (k EUR)</Label>
@@ -78,14 +77,10 @@ export function PreferencesEditor({
           onChange={(e) => setPrefs({ ...prefs, sectors: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
         />
       </div>
-      <div>
-        <Label htmlFor="location">Ville préférée</Label>
-        <Input
-          id="location"
-          value={prefs.preferredLocation ?? ""}
-          onChange={(e) => setPrefs({ ...prefs, preferredLocation: e.target.value || null })}
-        />
-      </div>
+      <LocationPicker
+        locations={prefs.locations}
+        onChange={(locations) => setPrefs({ ...prefs, locations })}
+      />
       <NegativeKeywords
         keywords={prefs.negativeKeywords}
         onChange={(kw) => setPrefs({ ...prefs, negativeKeywords: kw })}

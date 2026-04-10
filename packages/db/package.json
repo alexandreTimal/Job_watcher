@@ -26,6 +26,7 @@
     "push": "pnpm with-env drizzle-kit push",
     "studio": "pnpm with-env drizzle-kit studio",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "seed": "pnpm with-env tsx src/seed/dev-seed.ts",
     "with-env": "dotenv -e ../../.env --"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "drizzle-kit": "^0.31.5",
     "eslint": "catalog:",
     "prettier": "catalog:",
+    "tsx": "^4.21.0",
     "typescript": "catalog:"
   },
   "prettier": "@jobfindeer/prettier-config"

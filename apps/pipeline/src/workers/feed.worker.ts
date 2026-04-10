@@ -25,8 +25,7 @@ export async function generateFeeds(): Promise<void> {
       salaryMax: userPreferences.salaryMax,
       remotePreference: userPreferences.remotePreference,
       sectors: userPreferences.sectors,
-      preferredLocation: userPreferences.preferredLocation,
-      locationRadius: userPreferences.locationRadius,
+      locations: userPreferences.locations,
       negativeKeywords: userPreferences.negativeKeywords,
     })
     .from(users)
@@ -81,8 +80,7 @@ export async function generateFeeds(): Promise<void> {
           salaryMax: user.salaryMax,
           remotePreference: (user.remotePreference as "onsite" | "hybrid" | "remote" | "any") ?? "any",
           sectors: (user.sectors as string[]) ?? [],
-          preferredLocation: user.preferredLocation,
-          locationRadius: user.locationRadius,
+          locations: (user.locations as { label: string; radius: number | null }[]) ?? [],
           negativeKeywords: (user.negativeKeywords as string[]) ?? [],
         },
       );

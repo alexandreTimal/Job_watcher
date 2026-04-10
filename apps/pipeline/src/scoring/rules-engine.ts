@@ -71,9 +71,12 @@ export function scoreOffer(
   }
 
   // Location match
-  if (offer.location && preferences.preferredLocation) {
-    if (textContains(offer.location, preferences.preferredLocation)) {
-      matched.push({ criterion: preferences.preferredLocation, points: WEIGHTS.locationMatch });
+  if (offer.location && preferences.locations.length > 0) {
+    for (const loc of preferences.locations) {
+      if (textContains(offer.location, loc.label)) {
+        matched.push({ criterion: loc.label, points: WEIGHTS.locationMatch });
+        break;
+      }
     }
   }
 

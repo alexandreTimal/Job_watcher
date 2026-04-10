@@ -69,6 +69,32 @@ export interface ExtractionResult {
   metrics: ExtractionMetrics;
 }
 
+// Zod schema matching the LLM JSON output (snake_case French fields)
+const llmOutputSchema = z.object({
+  current_title: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  experience_years: z.number().int().nullable().optional(),
+  hard_skills: z.array(z.string()).optional().default([]),
+  soft_skills: z.array(z.string()).optional().default([]),
+  languages: z.array(z.object({
+    name: z.string(),
+    level: z.string().nullable(),
+  })).optional().default([]),
+  education_level: z.string().nullable().optional(),
+  work_history: z.array(z.object({
+    title: z.string(),
+    company: z.string().nullable().optional(),
+    start: z.string().nullable().optional(),
+    end: z.string().nullable().optional(),
+  })).optional().default([]),
+  education: z.array(z.object({
+    degree: z.string(),
+    school: z.string().nullable().optional(),
+    year: z.number().int().nullable().optional(),
+  })).optional().default([]),
+  certifications: z.array(z.string()).optional().default([]),
+});
+
 export async function extractProfileFromCV(cvText: string, modelId = "gemini-2.5-flash"): Promise<ExtractionResult> {
   const config = MODEL_CONFIG[modelId] ?? MODEL_CONFIG["gemini-2.5-flash"]!;
   const startTime = Date.now();
@@ -84,18 +110,43 @@ export async function extractProfileFromCV(cvText: string, modelId = "gemini-2.5
     prompt: `Ton objectif est d'extraire des informations structurées à partir d'un CV brut pour alimenter un algorithme de matching de recrutement.
 
 RÈGLES D'EXTRACTION OBLIGATOIRES :
-1. Précision : N'invente aucune information. Si une donnée (comme la localisation) est introuvable, utilise explicitement la valeur null.
-2. Expérience : Calcule les années d'expérience totales de manière réaliste en te basant sur les dates des postes occupés. Renvoie uniquement un nombre entier (ex: 5).
-3. Compétences : Sépare rigoureusement les technologies/outils (hard_skills) des qualités humaines (soft_skills).
+1. Langue des clés : Utilise STRICTEMENT les clés JSON en anglais définies dans le format attendu.
+2. current_title : Isole uniquement l'intitulé du poste actuel le plus récent (ex: "Fondateur & CEO"). Supprime impérativement le nom de l'entreprise de ce champ.
+3. experience_years : Calcule le total cumulé des années d'expérience professionnelle. Analyse les dates de début et de fin. Ne compte pas en double les expériences qui se chevauchent. Renvoie uniquement un entier.
+4. education_level : Déduis le niveau d'études global standardisé (ex: "Bac+2", "Bac+3", "Bac+5") en te basant sur le diplôme le plus élevé trouvé.
+5. Gestion du vide : Si une donnée textuelle est introuvable, renvoie 'null'. Si une liste (langues, expériences, diplômes, certifications) est vide, renvoie un tableau vide '[]'. N'invente aucune information.
 
 FORMAT DE SORTIE ATTENDU :
 Renvoie un objet JSON valide respectant strictement cette structure :
 {
-  "titre_actuel": "string ou null",
-  "localisation": "string ou null",
-  "annees_experience_totales": integer,
-  "hard_skills": ["skill1", "skill2"],
-  "soft_skills": ["skill1", "skill2"]
+  "current_title": "string | null",
+  "location": "string | null",
+  "experience_years": integer,
+  "hard_skills": ["string", "string"],
+  "soft_skills": ["string", "string"],
+  "languages": [
+    {
+      "name": "string",
+      "level": "string"
+    }
+  ],
+  "education_level": "string | null",
+  "work_history": [
+    {
+      "title": "string",
+      "company": "string",
+      "start": "string (YYYY ou MM/YYYY)",
+      "end": "string (YYYY, MM/YYYY ou 'Present')"
+    }
+  ],
+  "education": [
+    {
+      "degree": "string",
+      "school": "string",
+      "year": integer
+    }
+  ],
+  "certifications": ["string", "string"]
 }
 
 DOCUMENT À ANALYSER :
@@ -106,9 +157,7 @@ ${cvText}
 
   const durationMs = Date.now() - startTime;
 
-  // Log raw response for debugging
   console.log("[EXTRACT] result.text length:", result.text.length);
-  console.log("[EXTRACT] result.text (first 500):", result.text.slice(0, 500));
   console.log("[EXTRACT] result.finishReason:", result.finishReason);
 
   // Strip markdown fences if present, then parse JSON
@@ -118,25 +167,32 @@ ${cvText}
   }
   const rawJson: unknown = JSON.parse(text);
 
-  // Transform LLM output (French field names) → ExtractedProfile (English schema)
-  const llmOutputSchema = z.object({
-    titre_actuel: z.string().nullable().optional(),
-    localisation: z.string().nullable().optional(),
-    annees_experience_totales: z.number().int().nullable().optional(),
-    hard_skills: z.array(z.string()).optional().default([]),
-    soft_skills: z.array(z.string()).optional().default([]),
-  });
-
+  // Transform LLM output → ExtractedProfile
   const llmParsed = llmOutputSchema.safeParse(rawJson);
   let profile: ExtractedProfile | null;
 
   if (llmParsed.success) {
     const d = llmParsed.data;
     profile = {
-      skills: [...d.hard_skills, ...d.soft_skills],
-      experienceYears: d.annees_experience_totales ?? null,
-      currentLocation: d.localisation ?? null,
-      currentTitle: d.titre_actuel ?? null,
+      currentTitle: d.current_title ?? null,
+      currentLocation: d.location ?? null,
+      experienceYears: d.experience_years ?? null,
+      hardSkills: d.hard_skills,
+      softSkills: d.soft_skills,
+      languages: d.languages.map((l) => ({ name: l.name, level: l.level ?? null })),
+      educationLevel: d.education_level ?? null,
+      workHistory: d.work_history.map((w) => ({
+        title: w.title,
+        company: w.company ?? null,
+        start: w.start ?? null,
+        end: w.end ?? null,
+      })),
+      education: d.education.map((e) => ({
+        degree: e.degree,
+        school: e.school ?? null,
+        year: e.year ?? null,
+      })),
+      certifications: d.certifications,
     };
   } else {
     console.warn("[EXTRACT] LLM output did not match expected schema:", llmParsed.error.message);
@@ -148,7 +204,6 @@ ${cvText}
 
   const tokensIn = (usage?.promptTokens ?? usage?.input_tokens ?? usage?.inputTokens ?? 0) as number;
   const tokensOut = (usage?.completionTokens ?? usage?.output_tokens ?? usage?.outputTokens ?? 0) as number;
-
   const costUsd = (tokensIn / 1_000_000) * config.pricing.input + (tokensOut / 1_000_000) * config.pricing.output;
 
   return {

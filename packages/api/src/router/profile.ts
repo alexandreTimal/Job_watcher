@@ -1,6 +1,5 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { z } from "zod/v4";
 
 import { userProfiles, userPreferences } from "@jobfindeer/db/schema";
 import { preferencesSchema, extractedProfileSchema } from "@jobfindeer/validators";
@@ -30,6 +29,21 @@ export const profileRouter = {
   saveExtraction: protectedProcedure
     .input(extractedProfileSchema)
     .mutation(async ({ ctx, input }) => {
+      const allSkills = [...input.hardSkills, ...input.softSkills];
+
+      const data = {
+        hardSkills: input.hardSkills,
+        softSkills: input.softSkills,
+        skills: allSkills,
+        experienceYears: input.experienceYears,
+        currentLocation: input.currentLocation,
+        currentTitle: input.currentTitle,
+        languages: input.languages,
+        educationLevel: input.educationLevel,
+        rawExtraction: input as unknown,
+        updatedAt: new Date(),
+      };
+
       const existing = await ctx.db
         .select({ id: userProfiles.id })
         .from(userProfiles)
@@ -39,21 +53,12 @@ export const profileRouter = {
       if (existing.length > 0) {
         await ctx.db
           .update(userProfiles)
-          .set({
-            skills: input.skills,
-            experienceYears: input.experienceYears,
-            currentLocation: input.currentLocation,
-            currentTitle: input.currentTitle,
-            updatedAt: new Date(),
-          })
+          .set(data)
           .where(eq(userProfiles.userId, ctx.session.user.id));
       } else {
         await ctx.db.insert(userProfiles).values({
           userId: ctx.session.user.id,
-          skills: input.skills,
-          experienceYears: input.experienceYears,
-          currentLocation: input.currentLocation,
-          currentTitle: input.currentTitle,
+          ...data,
         });
       }
 

@@ -17,7 +17,6 @@ export function PreferencesForm({
   const [remotePreference, setRemotePreference] = useState<Preferences["remotePreference"]>("any");
   const [sectors, setSectors] = useState("");
   const [preferredLocation, setPreferredLocation] = useState("");
-  const [locationRadius, setLocationRadius] = useState("");
 
   function handleSave() {
     onSave({
@@ -26,8 +25,7 @@ export function PreferencesForm({
       salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
       remotePreference,
       sectors: sectors.split(",").map((s) => s.trim()).filter(Boolean),
-      preferredLocation: preferredLocation || null,
-      locationRadius: locationRadius ? parseInt(locationRadius, 10) : null,
+      locations: preferredLocation ? [{ label: preferredLocation, radius: null }] : [],
       negativeKeywords: [],
     });
   }
@@ -71,10 +69,6 @@ export function PreferencesForm({
         <div>
           <Label htmlFor="location">Ville préférée</Label>
           <Input id="location" value={preferredLocation} onChange={(e) => setPreferredLocation(e.target.value)} placeholder="Lyon" />
-        </div>
-        <div>
-          <Label htmlFor="radius">Rayon (km)</Label>
-          <Input id="radius" type="number" value={locationRadius} onChange={(e) => setLocationRadius(e.target.value)} placeholder="30" />
         </div>
       </div>
       <Button onClick={handleSave} className="min-h-[44px]">
