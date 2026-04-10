@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url);
@@ -22,4 +23,7 @@ const config = {
   typescript: { ignoreBuildErrors: true },
 };
 
-export default config;
+export default withSentryConfig(config, {
+  silent: true,
+  disableLogger: true,
+});

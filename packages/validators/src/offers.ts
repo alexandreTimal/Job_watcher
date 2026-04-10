@@ -20,3 +20,16 @@ export const normalizedOfferSchema = rawJobOfferSchema.extend({
 });
 
 export type NormalizedOffer = z.infer<typeof normalizedOfferSchema>;
+
+export const scoredOfferSchema = normalizedOfferSchema.extend({
+  score: z.number().min(0).max(100),
+  scoreBreakdown: z.object({
+    hardFilters: z.number(),
+    softCriteria: z.number(),
+    lexical: z.number(),
+  }),
+  justification: z.string(),
+  matchedBranch: z.string().nullable(),
+});
+
+export type ScoredOffer = z.infer<typeof scoredOfferSchema>;

@@ -1,5 +1,5 @@
 # generated: 2026-04-09
-# last_updated: 2026-04-09
+# last_updated: 2026-04-12
 # project: Job_watcher
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-09
-last_updated: 2026-04-09
+last_updated: 2026-04-12
 project: Job_watcher
 project_key: NOKEY
 tracking_system: file-system
@@ -44,9 +44,9 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 development_status:
   # Sprint 0 : Fondation Technique
   epic-0: in-progress
-  0-1-initialisation-du-monorepo-depuis-create-t3-turbo: review
-  0-2-schema-drizzle-postgres-chiffrement-pgcrypto: backlog
-  0-3-infrastructure-docker-caddy-ci-cd-sentry: backlog
+  0-1-initialisation-du-monorepo-depuis-create-t3-turbo: done
+  0-2-schema-drizzle-postgres-chiffrement-pgcrypto: done
+  0-3-infrastructure-docker-caddy-ci-cd-sentry: done
   epic-0-retrospective: optional
 
   # Epic 1 : Authentification & Inscription
@@ -55,9 +55,9 @@ development_status:
   1-2-essai-gratuit-7-jours-roles-utilisateur: backlog
   epic-1-retrospective: optional
 
-  # Epic 2 : Pipeline de Collecte & Traitement des Offres
+  # Epic 2 : Pipeline de Collecte & Traitement des Offres (enrichi — geocodage, remote_type, experience_years, description_raw)
   epic-2: backlog
-  2-1-structure-pipeline-bullmq-schema-offres: backlog
+  2-1-structure-pipeline-bullmq-schema-offres-enrichi: backlog
   2-2-source-france-travail-api-officielle: backlog
   2-3-source-wttj-scraping-metadonnees: backlog
   2-4-source-complementaire-hellowork: backlog
@@ -65,16 +65,18 @@ development_status:
   2-6-orchestrateur-pipeline-scheduler-nocturne: backlog
   epic-2-retrospective: optional
 
-  # Epic 3 : Onboarding Candidat & Profil
+  # Epic 3 : Onboarding Candidat & Profil (refondu — change proposal 2026-04-10)
   epic-3: backlog
-  3-1-schema-profil-preferences-upload-cv-extraction-llm: backlog
-  3-2-validation-du-profil-extrait-ecran-preferences: backlog
-  3-3-modification-du-profil-preferences-mots-cles-negatifs: backlog
+  3-1-schema-profil-enrichi-localisation-multi-mode-interactions: backlog
+  3-2-upload-cv-extraction-llm: backlog
+  3-3-texte-libre-conversationnel-analyse-intention-llm: backlog
+  3-4-socle-commun-calibrage-par-branche: backlog
+  3-5-modification-preferences-post-onboarding: backlog
   epic-3-retrospective: optional
 
-  # Epic 4 : Scoring, Feed & Experience Mobile
+  # Epic 4 : Scoring, Feed & Experience Mobile (scoring reecrit — filtres durs/mous/lexical par branche)
   epic-4: backlog
-  4-1-moteur-de-scoring-regles-ponderees: backlog
+  4-1-moteur-de-scoring-filtres-durs-criteres-mous-par-branche: backlog
   4-2-generation-du-feed-pre-calcule-par-profil: backlog
   4-3-api-trpc-feed-swipe: backlog
   4-4-interface-swipe-mobile-pwa: backlog

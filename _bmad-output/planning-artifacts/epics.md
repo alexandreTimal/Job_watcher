@@ -1,6 +1,10 @@
 ---
 stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
-inputDocuments: ['prd.md', 'architecture.md']
+inputDocuments: ['prd.md', 'architecture.md', 'sprint-change-proposal-2026-04-10', 'JobFindeer_Onboarding_Structure_v3']
+lastEdited: '2026-04-10'
+editHistory:
+  - date: '2026-04-10'
+    changes: 'Intégration onboarding v3 — Epic 3 refonte (3→5 stories), Epic 2 enrichi (geocodage, description_raw), Epic 4.1 réécrit (filtres durs/mous/lexical), FR42-48 ajoutées au coverage map'
 ---
 
 # JobFindeer - Epic Breakdown
@@ -129,9 +133,9 @@ FR7: Epic 6 - Suppression compte et donnees (droit a l'oubli)
 FR8: Epic 3 - Upload CV (PDF) onboarding
 FR9: Epic 3 - Extraction competences/experience/localisation CV via LLM
 FR10: Epic 3 - Validation et ajustement profil extrait
-FR11: Epic 3 - Definition preferences (contrat, salaire, teletravail, secteurs, geo)
+FR11: Epic 3 - Definition preferences socle commun (localisation multi-mode, contrat, rythme) + calibrage par branche
 FR12: Epic 3 - Modification preferences et profil a tout moment
-FR13: Epic 3 - Mots-cles negatifs pour exclure des offres
+FR13: Epic 3 - Exclusion automatique employeur actuel (branche 1)
 FR14: Epic 4 - Feed quotidien d'offres scorees par compatibilite
 FR15: Epic 4 - Affichage metadonnees + score + justification par offre
 FR16: Epic 4 - Tri par swipe mobile (garder, ecarter, mettre de cote)
@@ -147,9 +151,9 @@ FR25: Epic 2 - Collecte sources complementaires (HelloWork ou autre)
 FR26: Epic 2 - Normalisation offres (titre, entreprise, localisation, salaire, contrat)
 FR27: Epic 2 - Deduplication cross-sources via hash normalise
 FR28: Epic 2 - Purge offres expirees (retention courte)
-FR29: Epic 2 - Stockage metadonnees uniquement
+FR29: Epic 2 - Stockage metadonnees + description_raw temporaire 30j pour scoring lexical
 FR30: Epic 2 - Respect robots.txt, arret si source bloque
-FR31: Epic 4 - Scoring regles ponderees par profil
+FR31: Epic 4 - Scoring filtres durs 60-70% + criteres mous 30-40% par branche
 FR32: Epic 4 - Feed pre-calcule par profil via pipeline batch nocturne
 FR33: Epic 4 - Justification courte du score par offre
 FR34: Epic 7 - Taux de succes par source de scraping
@@ -160,6 +164,13 @@ FR38: Epic 7 - Metriques globales (offres/jour, taux dedup, utilisateurs servis)
 FR39: Epic 2 - Traitement demande cessation scraping
 FR40: Epic 2 - Desactivation source sans impact sur les autres
 FR41: Epic 5 - Conservation logs redirection comme preuve de loyaute
+FR42: Epic 3 - Texte libre conversationnel (100-500 caracteres)
+FR43: Epic 3 - Analyse texte libre via LLM (5 branches d'intention + confiance)
+FR44: Epic 3 - Reformulation intention validee/corrigee/rejetee par le candidat
+FR45: Epic 3 - Calibrage par branche (1-3 questions specifiques + socle commun S1-S3)
+FR46: Epic 3 - Stockage signaux d'interaction (impressions, clics, sauvegardes, redirections)
+FR47: Epic 4 - Scoring lexical deterministe plafonne 5-8% (titre, mots-cles, seniorite)
+FR48: Epic 4 - Filtre required_experience_years = 0 pour branche reconversion (branche 4)
 
 ## Epic List
 
@@ -172,16 +183,16 @@ Le candidat peut creer un compte, se connecter et beneficier d'un essai gratuit 
 **FRs couverts :** FR1, FR2, FR3
 
 ### Epic 2 : Pipeline de Collecte & Traitement des Offres
-L'administrateur peut executer le pipeline qui collecte, normalise, deduplique et stocke les offres depuis plusieurs sources.
+L'administrateur peut executer le pipeline qui collecte, normalise, deduplique et stocke les offres enrichies (geocodage, remote_type, experience_years, description_raw) depuis plusieurs sources.
 **FRs couverts :** FR23, FR24, FR25, FR26, FR27, FR28, FR29, FR30, FR39, FR40
 
 ### Epic 3 : Onboarding Candidat & Profil
-Le candidat peut creer son profil en uploadant son CV, definir ses preferences, et ajuster ses criteres a tout moment.
-**FRs couverts :** FR8, FR9, FR10, FR11, FR12, FR13
+Le candidat peut creer son profil via upload CV + texte libre conversationnel, etre classe dans une branche d'intention par le LLM, valider la reformulation, repondre aux questions de calibrage par branche et au socle commun, et ajuster ses criteres a tout moment.
+**FRs couverts :** FR8, FR9, FR10, FR11, FR12, FR13, FR42, FR43, FR44, FR45, FR46
 
 ### Epic 4 : Scoring, Feed & Experience Mobile
-Le candidat peut consulter son feed quotidien d'offres scorees sur mobile et trier par swipe.
-**FRs couverts :** FR14, FR15, FR16, FR31, FR32, FR33
+Le candidat peut consulter son feed quotidien d'offres scorees (filtres durs + criteres mous par branche + scoring lexical) sur mobile et trier par swipe.
+**FRs couverts :** FR14, FR15, FR16, FR31, FR32, FR33, FR47, FR48
 
 ### Epic 5 : Experience Desktop & Archivage
 Le candidat peut consulter ses offres sauvegardees sur desktop, acceder aux sources originales, et suivre ses candidatures.
@@ -211,7 +222,7 @@ Afin de disposer de la fondation technique pour developper toutes les features.
 
 **Given** un repertoire vide
 **When** le starter create-t3-turbo est clone et nettoye
-**Then** le monorepo contient `apps/web` (Next.js 15 App Router), `packages/db` (Drizzle), `packages/api` (tRPC v11), `packages/ui` (shadcn/ui + Tailwind v4), `packages/validators` (Zod)
+**Then** le monorepo contient `apps/web` (Next.js 16 App Router), `packages/db` (Drizzle), `packages/api` (tRPC v11), `packages/ui` (shadcn/ui + Tailwind v4), `packages/validators` (Zod)
 **And** `apps/expo` est supprime (app native prevue Phase 2)
 **And** `better-auth` est retire du package `packages/auth`
 **And** les packages supplementaires sont crees : `apps/pipeline`, `packages/queue`, `packages/email`
@@ -359,7 +370,7 @@ Afin de disposer de l'infrastructure pour les workers de collecte.
 
 **Given** le package `packages/db`
 **When** les tables d'offres sont ajoutees
-**Then** `raw_offers` stocke les metadonnees : titre, entreprise, localisation, salaire, type_contrat, url_source, date_publication, content_hash, source_name (FR29)
+**Then** `raw_offers` stocke les metadonnees : titre, entreprise, localisation, salaire, type_contrat, url_source, date_publication, content_hash, source_name + champs enrichis : `location_lat`, `location_lng`, `remote_type` (enum on_site|hybrid|full_remote), `required_experience_years` (integer nullable), `company_size` (enum nullable), `description_raw` (text, purgee apres 30j, jamais affichee) (FR29 revise)
 **And** `source_configs` stocke la config par source : nom, actif/inactif, derniere execution
 **And** `pipeline_runs` stocke les metriques par run : source, offres_collectees, offres_filtrees, erreurs, duree, timestamp
 **And** les migrations sont generees et applicables
@@ -438,9 +449,16 @@ Afin d'avoir une base d'offres propre sans doublons.
 **And** les offres dont le hash existe deja en base sont filtrees
 **And** les nouvelles offres sont inserees dans `raw_offers`
 
+**Given** des offres normalisees
+**When** le geocoding batch est applique
+**Then** les adresses sont geocodees via l'API BAN (Base Adresse Nationale, gratuite, FR)
+**And** `location_lat` et `location_lng` sont renseignes pour le calcul de distance au scoring
+**And** `remote_type` est normalise (on_site|hybrid|full_remote) par regex + heuristiques
+
 **Given** la table `raw_offers`
 **When** le purger (`apps/pipeline/src/processing/purger.ts`) est execute
 **Then** les offres `pending` de plus de 7 jours sont supprimees (FR28)
+**And** les `description_raw` de plus de 30 jours sont purgees (FR29 revise)
 **And** les offres `saved` ne sont jamais purgees
 
 ### Story 2.6 : Orchestrateur pipeline & scheduler nocturne
@@ -469,9 +487,26 @@ Afin d'avoir des offres fraiches chaque matin sans intervention manuelle.
 
 ## Epic 3 : Onboarding Candidat & Profil
 
-Le candidat peut creer son profil en uploadant son CV, definir ses preferences, et ajuster ses criteres a tout moment.
+Le candidat peut creer son profil via upload CV + texte libre conversationnel, etre classe dans une branche d'intention par le LLM, valider la reformulation, repondre aux questions de calibrage par branche et au socle commun, et ajuster ses criteres a tout moment.
 
-### Story 3.1 : Schema profil & preferences + Upload CV & extraction LLM
+### Story 3.1 : Schema profil enrichi, localisation multi-mode & table interactions
+
+En tant que developpeur,
+Je veux les fondations DB pour le nouveau flow onboarding,
+Afin de stocker les branches, le calibrage, les preferences multi-mode et les signaux d'interaction.
+
+**Acceptance Criteria:**
+
+**Given** le package `packages/db`
+**When** les tables de profil sont ajoutees/enrichies
+**Then** `user_profiles` contient : competences, experience, localisation, `branch` (enum 1-5), `free_text_raw`, `calibration_answers` (JSONB), `current_employer` — colonnes sensibles chiffrees via `pgcrypto` (NFR8)
+**And** `user_preferences` contient : `location_mode` (enum cities|france|remote_only), `cities` (JSONB array avec name, lat, lng, radius_km par ville), `default_radius_km` (defaut 25), `remote_friendly` (boolean), type_contrat, rythme_travail — pas de `sectors` ni `negative_keywords`
+**And** la table `user_interactions` est creee : user_id, offer_id, event_type (enum impression|click|save|dismiss|apply), created_at (FR46)
+**And** les schemas Zod sont crees : `packages/validators/src/onboarding.ts` (freeTextSchema, intentAnalysisOutputSchema, branchEnum, calibrationByBranchSchemas) et `packages/validators/src/interactions.ts` (eventTypeEnum, userInteractionSchema)
+**And** `packages/validators/src/preferences.ts` est enrichi (locationSchema, calibrationSchema, suppression keywordsSchema)
+**And** les migrations sont generees et applicables
+
+### Story 3.2 : Upload CV & extraction LLM
 
 En tant que candidat,
 Je veux uploader mon CV pour que le systeme extraie automatiquement mon profil,
@@ -479,63 +514,96 @@ Afin de ne pas saisir manuellement mes competences et mon experience.
 
 **Acceptance Criteria:**
 
-**Given** le package `packages/db`
-**When** les tables de profil sont ajoutees
-**Then** les tables `user_profiles` et `user_preferences` sont definies avec les colonnes sensibles chiffrees via `pgcrypto` (NFR8)
-**And** les migrations sont generees et applicables
-
 **Given** un candidat connecte sur la page d'onboarding
 **When** il uploade un fichier CV au format PDF (FR8)
 **Then** le fichier est stocke dans le volume Docker `/data/uploads/` avec un nom unique
-**And** le LLM (Vercel AI SDK + Gemini Flash) extrait les competences, l'experience et la localisation (FR9)
+**And** le LLM (Vercel AI SDK) extrait les competences, l'experience, la localisation, l'employeur actuel et le statut etudiant (FR9)
 **And** l'extraction utilise un structured output Zod pour garantir le format (NFR27)
-**And** les donnees extraites sont presentees au candidat pour validation
+**And** les donnees extraites sont presentees au candidat pour validation (FR10)
+**And** il peut modifier chaque champ avant de valider
+**And** les donnees validees sont chiffrees et sauvegardees dans `user_profiles` (NFR8)
 
 **Given** un CV uploade
 **When** l'extraction LLM echoue (timeout, erreur provider)
 **Then** le candidat est informe et peut reessayer ou saisir manuellement
 **And** l'erreur est capturee par Sentry
 
-### Story 3.2 : Validation du profil extrait & ecran preferences
+### Story 3.3 : Texte libre conversationnel & analyse d'intention LLM
 
 En tant que candidat,
-Je veux valider et ajuster le profil extrait puis definir mes preferences de recherche,
-Afin que le scoring corresponde exactement a mes attentes.
+Je veux decrire ma situation en texte libre et que le systeme comprenne mon intention,
+Afin d'etre oriente vers les bonnes questions de calibrage sans formulaire generique.
 
 **Acceptance Criteria:**
 
-**Given** un profil extrait par le LLM
-**When** le candidat consulte l'ecran de validation (ProfileReview)
-**Then** il voit un resume structure : competences, annees d'experience, localisation (FR10)
-**And** il peut modifier chaque champ avant de valider
-**And** les donnees validees sont chiffrees et sauvegardees dans `user_profiles` (NFR8)
+**Given** un candidat dont le profil CV est valide
+**When** il accede a l'etape texte libre (FreeTextInput)
+**Then** un champ ouvert 100-500 caracteres est affiche avec le framing : "Raconte-moi ce qui t'amene ici : ce que tu fais, ce que tu cherches, ce que tu veux eviter." (FR42)
+**And** un placeholder avec exemple court desmorce le syndrome de la page blanche
 
-**Given** le profil valide
-**When** le candidat accede a l'ecran de preferences (PreferencesForm)
-**Then** il peut definir : type de contrat, fourchette salariale, teletravail, secteurs preferes, perimetre geographique (FR11)
-**And** les preferences sont validees via Zod (`preferencesSchema`)
-**And** les preferences sont sauvegardees dans `user_preferences`
-**And** un message confirme la sauvegarde : "Ton premier feed sera pret demain matin"
+**Given** un texte libre saisi
+**When** le LLM (`apps/pipeline/src/llm/intent-analyzer.ts`) analyse le texte
+**Then** il recoit en contexte le resume CV + les 5 branches d'intention + instruction JSON structure
+**And** il retourne : branche retenue (1-5), score de confiance (0-1), signaux complementaires (contraintes, ton, mots-cles metier) (FR43)
 
-### Story 3.3 : Modification du profil, preferences & mots-cles negatifs
+**Given** un score de confiance >= 0.7
+**When** le systeme affiche la reformulation (IntentValidation)
+**Then** le candidat voit : "Si je comprends bien : [synthese]. C'est ca ?" avec 3 actions : Oui exactement / Presque, je corrige / Pas du tout (FR44)
+**And** si "Oui" → branche confirmee, passage au calibrage
+**And** si "Presque" → select des 5 branches pre-rempli avec la meilleure hypothese
+**And** si "Pas du tout" → select des 5 branches sans pre-remplissage
+
+**Given** un score de confiance < 0.7
+**When** le systeme affiche le fallback
+**Then** le select des 5 branches est presente directement, sans reformulation (FR44)
+
+### Story 3.4 : Socle commun & calibrage par branche
 
 En tant que candidat,
-Je veux modifier mes preferences et ajouter des mots-cles negatifs a tout moment,
+Je veux repondre a des questions ciblees selon ma branche d'intention,
+Afin que le scoring soit adapte a ma situation specifique.
+
+**Acceptance Criteria:**
+
+**Given** une branche confirmee (1-5)
+**When** le composant BranchCalibration est affiche
+**Then** les questions de calibrage specifiques a la branche sont presentees (FR45) :
+- Branche 1 (meme poste, en mieux) : axes d'amelioration prioritaires (multi-select 1-3), salaire minimum acceptable (slider), teletravail souhaite (4 niveaux)
+- Branche 2 (monter en responsabilites) : nature du saut de responsabilites (multi-select)
+- Branche 3 (changer de metier) : metiers pivots cibles (texte libre + suggestions LLM via `pivot-suggester.ts`), tolerance baisse salaire (4 choix langage naturel)
+- Branche 4 (reconversion) : maturite du projet (metier precis / 2-3 pistes / pas encore → fallback gracieux), acceptation du niveau (junior / intermediaire / les deux)
+- Branche 5 (alternance/stage) : S1 avec rayon reduit 15km, type alternance/stage, domaine d'etudes
+
+**Given** les questions de calibrage repondues
+**When** le socle commun (CommonQuestions) est affiche
+**Then** S1 localisation multi-mode : villes avec rayon (autocomplete API BAN) OU "Partout en France" OU "Teletravail uniquement" + option transverse "Ouvert au teletravail" (FR11)
+**And** S2 type de contrat : multi-selection CDI/CDD/Interim/Freelance (ecrasee pour branche 5)
+**And** S3 rythme de travail : temps plein / temps partiel / peu importe (non applicable branche 5)
+**And** les reponses sont validees via Zod et sauvegardees dans `user_preferences` + `calibration_answers`
+**And** un message confirme : "Ton premier feed sera pret demain matin"
+
+**Given** la branche 4 avec reponse "Pas encore" a la maturite
+**When** le fallback gracieux est active
+**Then** le message bienveillant s'affiche : "JobFindeer t'aide a trouver des offres sur un metier cible. Reviens quand tu auras au moins une piste."
+
+### Story 3.5 : Modification des preferences post-onboarding
+
+En tant que candidat,
+Je veux modifier mes preferences et mon calibrage a tout moment,
 Afin d'affiner mon feed quand les resultats ne me conviennent pas.
 
 **Acceptance Criteria:**
 
 **Given** un candidat connecte sur desktop
 **When** il accede a `/settings` dans le layout `(desktop)`
-**Then** le composant PreferencesEditor affiche les preferences actuelles en mode edition (FR12)
-**And** il peut modifier tous les champs (contrat, salaire, teletravail, secteurs, geo)
+**Then** le composant PreferencesEditor affiche le socle commun + calibrage actuel en mode edition (FR12)
+**And** il peut modifier tous les champs (localisation, contrat, rythme, calibrage branche)
+**And** le composant LocationEditor permet l'override du rayon ville par ville
 **And** les modifications sont sauvegardees via tRPC `profile.updatePreferences`
 
-**Given** l'ecran de preferences
-**When** le candidat ajoute des mots-cles negatifs (FR13)
-**Then** il peut saisir des mots-cles a exclure (ex: "PHP", "stage", "alternance")
-**And** les mots-cles sont valides via Zod et sauvegardes dans `user_preferences`
-**And** le prochain feed prendra en compte les mots-cles negatifs dans le scoring
+**Given** un candidat en branche 1 avec "Une entreprise differente de la mienne" coche
+**When** l'exclusion employeur est active
+**Then** l'employeur actuel (identifie via CV) est exclu automatiquement du scoring (FR13)
 
 **Given** un candidat sur mobile
 **When** il accede a ses preferences depuis le feed
@@ -547,23 +615,34 @@ Afin d'affiner mon feed quand les resultats ne me conviennent pas.
 
 Le candidat peut consulter son feed quotidien d'offres scorees sur mobile et trier par swipe.
 
-### Story 4.1 : Moteur de scoring regles ponderees
+### Story 4.1 : Moteur de scoring filtres durs + criteres mous par branche
 
 En tant que systeme,
-Je veux scorer chaque offre par rapport a chaque profil candidat,
+Je veux scorer chaque offre par rapport a chaque profil candidat selon sa branche d'intention,
 Afin de generer un feed pertinent et personnalise.
 
 **Acceptance Criteria:**
 
-**Given** une offre normalisee et un profil utilisateur (competences, preferences)
-**When** le scoring engine (`apps/pipeline/src/scoring/rules-engine.ts`) est applique
-**Then** un score est calcule selon des regles ponderees : mots-cles (match competences), salaire (dans la fourchette), localisation (perimetre geo), type contrat (match preference), experience (adequation) (FR31)
-**And** chaque critere a un poids configurable
-**And** les mots-cles negatifs du profil reduisent le score
+**Given** une offre enrichie et un profil utilisateur (branch, calibration_answers, preferences)
+**When** les filtres durs (`apps/pipeline/src/scoring/hard-filters.ts`) sont appliques
+**Then** les offres sont filtrees sur : localisation + distance (calcul haversine lat/lng vs villes profil + rayon), type de contrat, salaire minimum declare, teletravail strict — pesant collectivement 60-70% du score (FR31)
+**And** pour les candidats en branche 4, un filtre `required_experience_years = 0` exclut les offres exigeant de l'experience sur le metier cible (FR48)
+**And** pour les candidats en branche 1 avec exclusion employeur active, l'employeur actuel est exclu (FR13)
 
-**Given** un score calcule
+**Given** une offre ayant passe les filtres durs
+**When** les criteres mous (`apps/pipeline/src/scoring/soft-criteria.ts`) sont appliques
+**Then** un score mou est calcule selon la branche d'intention avec ponderation variable (30-40%) (FR31)
+**And** chaque branche a ses propres poids configurables pour les criteres de calibrage
+
+**Given** une offre avec description_raw disponible
+**When** le scoring lexical (`apps/pipeline/src/scoring/lexical-scorer.ts`) est applique
+**Then** une approche deterministe (mots-cles dans le titre, sac de mots-cles descriptif, comparaison de seniorite) est utilisee pour les criteres flous (FR47)
+**And** la ponderation est plafonnee a 5-8% du score global
+**And** aucun filtre dur n'est applique sur ce critere
+
+**Given** un score total calcule
 **When** la justification (`apps/pipeline/src/scoring/justification.ts`) est generee
-**Then** une justification courte est produite au format "87% — React + Lyon + 38-42k" (FR33)
+**Then** une justification courte est produite au format "87% — React + Lyon + 38-42k" integrant la branche (FR33)
 **And** la justification liste les criteres principaux qui ont contribue au score
 
 ### Story 4.2 : Generation du feed pre-calcule par profil

@@ -2,53 +2,79 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ExtractedProfile, Preferences } from "@jobfindeer/validators";
+import type { ExtractedProfile } from "@jobfindeer/validators";
 import type { ExtractionMetrics } from "~/lib/extract-cv";
 import { useTRPC } from "~/trpc/react";
 import { useMutation } from "@tanstack/react-query";
 import { CvUpload } from "./_components/CvUpload";
 import { ProfileReview } from "./_components/ProfileReview";
-import { PreferencesForm } from "./_components/PreferencesForm";
+import { ChatQuestionnaire } from "./_components/ChatQuestionnaire";
+import { StepNavigation } from "./_components/StepNavigation";
+import { DEMO_QUESTIONS } from "./_lib/demo-questions";
+import { createInitialState } from "./_lib/questionnaire-types";
+import type { QuestionnaireState } from "./_lib/questionnaire-types";
 
-type Step = "upload" | "review" | "preferences" | "done";
+const STEPS = ["upload", "review", "questionnaire"] as const;
+type Step = (typeof STEPS)[number];
 
 export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("upload");
   const [extraction, setExtraction] = useState<ExtractedProfile | null>(null);
   const [metrics, setMetrics] = useState<ExtractionMetrics | null>(null);
+  const [questionnaireState, setQuestionnaireState] =
+    useState<QuestionnaireState>(() => createInitialState(DEMO_QUESTIONS));
   const router = useRouter();
   const trpc = useTRPC();
 
   const saveProfile = useMutation(trpc.profile.saveExtraction.mutationOptions());
-  const savePrefs = useMutation(trpc.profile.updatePreferences.mutationOptions());
+
+  const stepIndex = STEPS.indexOf(step);
+
+  const isQuestionnaireComplete =
+    questionnaireState.answers.length === questionnaireState.questions.length &&
+    questionnaireState.currentQuestionIndex === questionnaireState.questions.length - 1;
 
   function handleExtracted(profile: ExtractedProfile, _filepath: string, m: ExtractionMetrics) {
     setExtraction(profile);
     setMetrics(m);
+    setQuestionnaireState(createInitialState(DEMO_QUESTIONS));
     setStep("review");
   }
 
   async function handleProfileConfirm(profile: ExtractedProfile) {
     await saveProfile.mutateAsync(profile);
-    setStep("preferences");
+    setStep("questionnaire");
   }
 
-  async function handlePreferencesSave(prefs: Preferences) {
-    await savePrefs.mutateAsync(prefs);
-    setStep("done");
-    router.push("/feed");
+  function goBack() {
+    if (stepIndex > 0) {
+      setStep(STEPS[stepIndex - 1]!);
+    }
   }
+
+  function goNext() {
+    if (step === "upload" && extraction) {
+      setStep("review");
+    } else if (step === "review" && extraction) {
+      handleProfileConfirm(extraction);
+    } else if (step === "questionnaire" && isQuestionnaireComplete) {
+      router.push("/feed");
+    }
+  }
+
+  const canGoNext =
+    (step === "upload" && extraction !== null) ||
+    (step === "review" && extraction !== null && !saveProfile.isPending) ||
+    (step === "questionnaire" && isQuestionnaireComplete);
 
   return (
     <div className="mx-auto max-w-md p-6">
       <div className="mb-6 flex gap-2">
-        {["upload", "review", "preferences"].map((s, i) => (
+        {STEPS.map((s, i) => (
           <div
             key={s}
             className={`h-1 flex-1 rounded ${
-              ["upload", "review", "preferences"].indexOf(step) >= i
-                ? "bg-primary"
-                : "bg-muted"
+              stepIndex >= i ? "bg-primary" : "bg-muted"
             }`}
           />
         ))}
@@ -60,7 +86,6 @@ export default function OnboardingPage() {
           <RawJsonBypass onLoad={(profile) => {
             setExtraction(profile);
             setMetrics(null);
-            setStep("review");
           }} />
         </>
       )}
@@ -70,7 +95,20 @@ export default function OnboardingPage() {
           {metrics && <MetricsPanel metrics={metrics} />}
         </>
       )}
-      {step === "preferences" && <PreferencesForm onSave={handlePreferencesSave} />}
+      {step === "questionnaire" && (
+        <ChatQuestionnaire
+          state={questionnaireState}
+          onChange={setQuestionnaireState}
+        />
+      )}
+
+      <StepNavigation
+        onBack={goBack}
+        onNext={goNext}
+        canGoBack={stepIndex > 0}
+        canGoNext={canGoNext}
+        nextLabel={step === "questionnaire" && isQuestionnaireComplete ? "Terminer" : undefined}
+      />
     </div>
   );
 }

@@ -12,9 +12,12 @@ import { SignOutButton } from "~/app/_components/SignOutButton";
 import "~/app/styles.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.AUTH_URL ?? "http://localhost:3000",
+  ),
   title: "JobFindeer",
   description: "Votre veille emploi intelligente",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

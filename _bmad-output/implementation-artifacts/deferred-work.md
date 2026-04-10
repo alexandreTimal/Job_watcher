@@ -13,3 +13,13 @@
 ## Deferred from: spec-refacto-preferences-form-ux (2026-04-10)
 
 - Mobile `PreferencesForm.tsx` utilise encore un input texte libre pour la localisation au lieu du `LocationPicker` avec Google Places. Le mapping données est correct (`locations[]`) mais l'UX reste legacy.
+
+## Deferred from: code review story 0.1 (2026-04-12)
+
+- `packages/queue/src/connection.ts` ne gere pas Redis TLS (`rediss://`) — a traiter si Redis managé en prod
+- `packages/db/src/client.ts` pool Postgres non borné (defaut 10) — a ajuster si deployment serverless
+- `packages/db/src/schema/profile.ts` `notificationsEnabled` est `text enum` au lieu de `boolean` — inconsistance avec `sourceConfigs.active`
+- `packages/db/src/schema/feed.ts` `userFeeds` pas de contrainte unique `(userId, offerId)` — risque doublon feed
+- `packages/email/src/index.ts` est un stub vide — jobs email enqueues sans worker (normal avant Epic 7)
+- `apps/web/next.config.js` pas de `eslint: { ignoreDuringBuilds: true }` — double-lint en CI
+- Root `tsconfig.json` utilise `moduleResolution: nodenext` vs `Bundler` dans tooling — conflit potentiel IDE

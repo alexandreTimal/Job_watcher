@@ -3,12 +3,15 @@ stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
 status: 'complete'
 completedAt: '2026-04-09'
-status: 'in-progress'
-inputDocuments: ['prd.md']
+inputDocuments: ['prd.md', 'sprint-change-proposal-2026-04-10', 'JobFindeer_Onboarding_Structure_v3']
 workflowType: 'architecture'
 project_name: 'Job_watcher'
 user_name: 'Alexandre'
 date: '2026-04-09'
+lastEdited: '2026-04-10'
+editHistory:
+  - date: '2026-04-10'
+    changes: 'Intégration onboarding v3 & scoring par branche — schémas enrichis, pipeline scoring séparé, appels LLM onboarding, structure fichiers, schemas Zod, mapping FR42-48'
 ---
 
 # Architecture Decision Document
@@ -19,15 +22,16 @@ _Ce document se construit collaborativement étape par étape. Les sections sont
 
 ### Vue d'ensemble des Exigences
 
-**Exigences Fonctionnelles (41 FRs) :**
+**Exigences Fonctionnelles (48 FRs) :**
 - Gestion de compte & authentification (7 FRs) : inscription email/OAuth, essai 7 jours, abonnements Stripe, export/suppression RGPD
-- Onboarding & profil (6 FRs) : upload CV, extraction LLM, préférences candidat, mots-clés négatifs
+- Onboarding & profil (11 FRs) : upload CV, extraction LLM, texte libre conversationnel (FR42), analyse LLM d'intention avec 5 branches (FR43), reformulation validée (FR44), calibrage par branche (FR45), socle commun multi-mode (FR11), exclusion automatique employeur actuel branche 1 (FR13), signaux d'interaction (FR46)
 - Feed & découverte d'offres (7 FRs) : feed quotidien scoré, swipe mobile, archivage desktop, redirection source, logs de redirection
-- Notifications (2 FRs) : push quotidien, opt-in/opt-out
-- Pipeline de collecte (8 FRs) : multi-sources (France Travail API, WTTJ scraping, sources complémentaires), normalisation, dédup, purge, métadonnées uniquement, respect robots.txt
-- Scoring & matching (3 FRs) : scoring règles pondérées par profil, feed pré-calculé batch, justification score
+- Notifications (2 FRs) : email quotidien, opt-in/opt-out
+- Pipeline de collecte (8 FRs) : multi-sources, normalisation, dédup, purge, description_raw temporaire 30j pour scoring lexical (FR29 révisé), respect robots.txt
+- Scoring & matching (3 FRs) : filtres durs 60-70% + critères mous 30-40% par branche (FR31 révisé), feed pré-calculé batch, justification score
+- Scoring lexical & filtres spécialisés (2 FRs) : approche lexicale déterministe plafonnée 5-8% (FR47), filtre experience branche 4 (FR48)
 - Dashboard ops (5 FRs) : monitoring sources, alertes, logs erreur, run de test, métriques globales
-- Conformité & juridique (3 FRs) : cessation de scraping, désactivation source, logs redirection
+- Conformité & juridique (3 FRs) : cessation de scraping 48h ouvrées, désactivation source, logs redirection
 
 **Exigences Non-Fonctionnelles (32 NFRs) :**
 - Performance (6 NFRs) : feed < 2s 4G, FCP < 1.5s, TTI < 3s, bundle < 200KB, pipeline avant 7h, swipe < 300ms
@@ -168,7 +172,9 @@ cd jobfindeer && pnpm i
 | Cache Redis serveur | Postgres suffit au MVP, ajout si latences justifiées |
 | Push notifications (Web Push VAPID) | Email suffit au MVP, push en Phase 2 |
 | Stockage S3 | Filesystem VPS suffit en mono-serveur |
-| Scoring LLM sémantique | Scoring règles pondérées au MVP, LLM sémantique Phase 2 |
+| Scoring LLM sémantique | Scoring filtres durs + critères mous + lexical au MVP, LLM sémantique Phase 2 |
+| Enrichissement SIRENE | Optionnel au MVP — dépendance externe pour un critère branche 1 uniquement |
+| Geocoding | API BAN (Phase 1 FR, gratuite). Google Places Phase 3 Europe |
 | App native React Native | PWA au MVP, app native Phase 2 |
 
 ### Architecture des Données
@@ -179,6 +185,13 @@ cd jobfindeer && pnpm i
 - **Feed :** table `user_feeds` avec `status` (`pending` | `saved` | `dismissed`), rétention 7 jours pour `pending`, pas de limite pour `saved`
 - **Métriques :** table `pipeline_runs` (source, offres collectées, erreurs, durée, timestamp)
 - **Migrations :** Drizzle Kit (mode `generate` pour review avant apply)
+
+**Schémas enrichis (v3) :**
+
+- **`user_profiles` enrichi :** ajout `branch` (enum 1-5 — branche d'intention), `free_text_raw` (texte libre onboarding), `calibration_answers` (JSONB — réponses calibrage par branche), `current_employer` (extrait du CV, pour exclusion branche 1)
+- **`user_preferences` enrichi :** ajout `location_mode` (enum `cities` | `france` | `remote_only`), `cities` (JSONB array avec `name`, `lat`, `lng`, `radius_km` par ville), `default_radius_km` (integer, défaut 25), `remote_friendly` (boolean transverse). Suppression : `sectors` (secteurs préférés), `negative_keywords` (mots-clés négatifs)
+- **`raw_offers` enrichi :** ajout `location_lat` (float), `location_lng` (float), `remote_type` (enum `on_site` | `hybrid` | `full_remote`), `required_experience_years` (integer nullable), `company_size` (enum nullable, SIRENE optionnel), `description_raw` (text, purgée après 30 jours, jamais affichée)
+- **Nouvelle table `user_interactions` :** `id`, `user_id`, `offer_id`, `event_type` (enum `impression` | `click` | `save` | `dismiss` | `apply`), `created_at`. Pas d'exploitation algorithmique V1, stockage uniquement pour V2+
 
 ### Sécurité
 
@@ -195,7 +208,8 @@ cd jobfindeer && pnpm i
 - **Next.js ↔ Pipeline :** BullMQ comme bus de communication + Postgres comme intermédiaire de données
 - **Gestion erreurs pipeline :** retry BullMQ natif (3 tentatives, backoff exponentiel), `Promise.allSettled` entre sources
 - **Rate limiting scraping :** `sleep()` configurable par source
-- **LLM :** Vercel AI SDK, provider Gemini Flash, structured output Zod
+- **LLM :** Vercel AI SDK, structured output Zod. 2-3 appels par onboarding : extraction CV (existant), analyse texte libre + classification branche (nouveau), suggestions métiers pivots branche 3 (nouveau). Modèle par appel à déterminer après benchmark.
+- **Pipeline scoring séparé :** 2 pipelines distincts — (1) Collecte : sources → validation Zod → dédup → DB, (2) Scoring : pour chaque utilisateur actif → filtres durs → critères mous par branche → tri → insertion `user_feeds`
 
 ### Infrastructure & Déploiement
 
@@ -210,15 +224,16 @@ cd jobfindeer && pnpm i
 
 **Séquence d'implémentation :**
 1. Init monorepo `create-t3-turbo` + nettoyage (retirer Expo, remplacer better-auth)
-2. Schema Drizzle + migrations + `pgcrypto` setup
+2. Schema Drizzle enrichi (profiles avec branch/calibration, preferences avec location_mode/cities, offers avec remote_type/experience_years/description_raw, table interactions) + migrations + `pgcrypto` setup
 3. Auth.js + rôles + Stripe
-4. Pipeline BullMQ : sources → validation → scoring → dedup → DB
-5. Feed API (tRPC) + interface swipe mobile
-6. Interface desktop (offres sauvegardées)
-7. Dashboard ops (métriques pipeline)
-8. Notifications email (Resend)
-9. LLM onboarding (extraction CV via Vercel AI SDK)
-10. Docker Compose + Caddy + CI/CD GitHub Actions
+4. Pipeline collecte BullMQ : sources → validation Zod → dédup → DB (enrichi : géocodage BAN, remote_type, experience_years, description_raw)
+5. Pipeline scoring BullMQ : filtres durs → critères mous par branche → scoring lexical → tri → insertion user_feeds
+6. Onboarding multi-step : upload CV + extraction LLM + texte libre + analyse intention LLM + reformulation + calibrage par branche + socle commun
+7. Feed API (tRPC) + interface swipe mobile
+8. Interface desktop (offres sauvegardées, settings avec LocationEditor)
+9. Dashboard ops (métriques pipeline)
+10. Notifications email (Resend)
+11. Docker Compose + Caddy + CI/CD GitHub Actions
 
 **Dépendances cross-composants :**
 - `packages/db` (Drizzle) est importé par `apps/web` ET `apps/pipeline`
@@ -407,12 +422,16 @@ jobfindeer/
 │   │       │   │   │       ├── OfferCard.tsx
 │   │       │   │   │       └── SwipeStack.tsx
 │   │       │   │   └── onboarding/
-│   │       │   │       ├── page.tsx        # FR8-11 — Upload CV + préférences
+│   │       │   │       ├── page.tsx        # FR8-11, FR42-46 — Onboarding multi-step
 │   │       │   │       ├── loading.tsx
 │   │       │   │       └── _components/
-│   │       │   │           ├── CvUploader.tsx
-│   │       │   │           ├── ProfileReview.tsx
-│   │       │   │           └── PreferencesForm.tsx
+│   │       │   │           ├── CvUploader.tsx          # Upload CV + extraction LLM
+│   │       │   │           ├── ProfileReview.tsx        # Validation profil extrait
+│   │       │   │           ├── FreeTextInput.tsx        # FR42 — Texte libre conversationnel
+│   │       │   │           ├── IntentValidation.tsx     # FR43-44 — Reformulation LLM + validation
+│   │       │   │           ├── BranchCalibration.tsx    # FR45 — Questions calibrage par branche
+│   │       │   │           ├── CommonQuestions.tsx       # Socle commun S1-S3
+│   │       │   │           └── LocationPicker.tsx       # S1 — Multi-villes, rayon, modes
 │   │       │   ├── (desktop)/              # Layout desktop-first (1024px+)
 │   │       │   │   ├── layout.tsx
 │   │       │   │   ├── page.tsx            # Landing page marketing (SEO)
@@ -422,9 +441,10 @@ jobfindeer/
 │   │       │   │   │   └── _components/
 │   │       │   │   │       └── OfferTable.tsx
 │   │       │   │   ├── settings/
-│   │       │   │   │   ├── page.tsx        # FR12-13 — Préférences + mots-clés négatifs
+│   │       │   │   │   ├── page.tsx        # FR12 — Modification préférences + calibrage
 │   │       │   │   │   └── _components/
-│   │       │   │   │       └── PreferencesEditor.tsx
+│   │       │   │   │       ├── PreferencesEditor.tsx    # Socle commun + calibrage
+│   │       │   │   │       └── LocationEditor.tsx       # Override rayon par ville
 │   │       │   │   └── billing/
 │   │       │   │       ├── page.tsx        # FR4-5 — Gestion abonnement Stripe
 │   │       │   │       └── _components/
@@ -476,14 +496,19 @@ jobfindeer/
 │           │   ├── hellowork.ts            # FR25 — Source complémentaire
 │           │   └── index.ts               # Registry des sources actives
 │           ├── scoring/
-│           │   ├── rules-engine.ts         # FR31 — Scoring règles pondérées
-│           │   └── justification.ts        # FR33 — Génération justification score
+│           │   ├── hard-filters.ts         # FR31 — Filtres durs (localisation, contrat, salaire, télétravail)
+│           │   ├── soft-criteria.ts        # FR31 — Critères mous par branche d'intention
+│           │   ├── lexical-scorer.ts       # FR47 — Scoring lexical déterministe (5-8%)
+│           │   ├── branch-filters.ts       # FR48 — Filtres spécialisés par branche (experience branche 4)
+│           │   └── justification.ts        # FR33 — Génération justification score (intégrant branche)
 │           ├── processing/
 │           │   ├── normalizer.ts           # FR26 — Normalisation offres
 │           │   ├── deduplicator.ts         # FR27 — Dédup cross-sources (hash)
 │           │   └── purger.ts              # FR28 — Purge offres expirées
 │           ├── llm/
-│           │   └── cv-extractor.ts         # FR9 — Extraction CV via Vercel AI SDK
+│           │   ├── cv-extractor.ts         # FR9 — Extraction CV via Vercel AI SDK
+│           │   ├── intent-analyzer.ts      # FR43 — Analyse texte libre → branche + confiance
+│           │   └── pivot-suggester.ts      # Branche 3 — Suggestions métiers pivots LLM
 │           └── lib/
 │               ├── logger.ts              # Logger structuré [timestamp] [SOURCE] level
 │               └── sleep.ts               # Rate limiting configurable
@@ -510,8 +535,9 @@ jobfindeer/
 │   │       ├── index.ts                   # Client Drizzle + connexion Postgres
 │   │       ├── schema/
 │   │       │   ├── users.ts               # users, user_roles
-│   │       │   ├── profiles.ts            # user_profiles, user_preferences
-│   │       │   ├── offers.ts              # raw_offers, offer_hashes
+│   │       │   ├── profiles.ts            # user_profiles (+ branch, free_text_raw, calibration_answers, current_employer), user_preferences (+ location_mode, cities, default_radius_km, remote_friendly)
+│   │       │   ├── offers.ts              # raw_offers (+ location_lat/lng, remote_type, required_experience_years, company_size, description_raw), offer_hashes
+│   │       │   ├── interactions.ts        # (nouveau) user_interactions (user_id, offer_id, event_type, created_at)
 │   │       │   ├── feeds.ts               # user_feeds (status: pending|saved|dismissed)
 │   │       │   ├── pipeline.ts            # pipeline_runs, source_configs
 │   │       │   ├── subscriptions.ts       # stripe_subscriptions, stripe_events
@@ -530,8 +556,10 @@ jobfindeer/
 │   │   ├── package.json
 │   │   └── src/
 │   │       ├── user.ts                    # createUserSchema, updateProfileSchema
-│   │       ├── preferences.ts             # preferencesSchema, keywordsSchema
-│   │       ├── offer.ts                   # rawJobOfferSchema, feedItemSchema
+│   │       ├── preferences.ts             # preferencesSchema, locationSchema, calibrationSchema (suppression keywordsSchema)
+│   │       ├── onboarding.ts              # (nouveau) freeTextSchema, intentAnalysisOutputSchema, branchEnum, calibrationByBranchSchemas
+│   │       ├── offer.ts                   # rawJobOfferSchema enrichi (remote_type, experience_years, description_raw), feedItemSchema
+│   │       ├── interactions.ts            # (nouveau) eventTypeEnum, userInteractionSchema
 │   │       └── admin.ts                   # sourceConfigSchema, testRunSchema
 │   │
 │   ├── auth/                               # Auth.js config
@@ -589,13 +617,14 @@ jobfindeer/
 | Auth (FR1-3) | `packages/auth/`, `apps/web/src/app/(auth)/` |
 | Abonnement (FR4-5) | `apps/web/src/app/(desktop)/billing/`, `packages/api/src/routers/billing.ts`, `apps/web/src/app/api/stripe/` |
 | RGPD (FR6-7) | `packages/api/src/routers/gdpr.ts` |
-| Onboarding (FR8-11) | `apps/web/src/app/(mobile)/onboarding/`, `apps/pipeline/src/llm/cv-extractor.ts` |
-| Préférences (FR12-13) | `apps/web/src/app/(desktop)/settings/`, `packages/api/src/routers/profile.ts` |
+| Onboarding (FR8-11, FR42-46) | `apps/web/src/app/(mobile)/onboarding/`, `apps/pipeline/src/llm/cv-extractor.ts`, `apps/pipeline/src/llm/intent-analyzer.ts`, `packages/validators/src/onboarding.ts` |
+| Préférences (FR12-13) | `apps/web/src/app/(desktop)/settings/`, `packages/api/src/routers/profile.ts`, `packages/validators/src/preferences.ts` |
 | Feed (FR14-16) | `apps/web/src/app/(mobile)/feed/`, `packages/api/src/routers/feed.ts` |
 | Offres desktop (FR17-20) | `apps/web/src/app/(desktop)/offers/`, `packages/db/src/schema/redirections.ts` |
 | Notifications (FR21-22) | `packages/email/`, `apps/pipeline/src/workers/email.worker.ts` |
 | Collecte (FR23-30) | `apps/pipeline/src/sources/`, `apps/pipeline/src/processing/` |
-| Scoring (FR31-33) | `apps/pipeline/src/scoring/`, `apps/pipeline/src/workers/scoring.worker.ts` |
+| Scoring (FR31-33, FR47-48) | `apps/pipeline/src/scoring/`, `apps/pipeline/src/workers/scoring.worker.ts` |
+| Interactions (FR46) | `packages/db/src/schema/interactions.ts`, `packages/validators/src/interactions.ts` |
 | Dashboard ops (FR34-38) | `apps/web/src/app/admin/`, `packages/api/src/routers/admin.ts` |
 | Conformité (FR39-41) | `packages/db/src/schema/redirections.ts`, `packages/api/src/routers/admin.ts` |
 

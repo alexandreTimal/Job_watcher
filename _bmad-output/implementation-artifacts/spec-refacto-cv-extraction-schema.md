@@ -2,7 +2,8 @@
 title: 'Refacto schema extraction CV — enrichissement profil'
 type: 'refactor'
 created: '2026-04-10'
-status: 'done'
+status: 'needs-update'
+updateReason: 'Sprint Change Proposal 2026-04-10 — Ajouter current_employer (exclusion branche 1, FR13) et is_student (préréglage S3 branche 5) à l extraction LLM.'
 baseline_commit: 'a4c6418'
 context: []
 ---

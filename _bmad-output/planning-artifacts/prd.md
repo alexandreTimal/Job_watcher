@@ -1,6 +1,6 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
-inputDocuments: ['user-provided-brief-jobfindeer']
+stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete', 'step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
+inputDocuments: ['user-provided-brief-jobfindeer', 'sprint-change-proposal-2026-04-10', 'JobFindeer_Onboarding_Structure_v3']
 workflowType: 'prd'
 documentCounts:
   briefs: 1
@@ -12,6 +12,10 @@ classification:
   domain: general
   complexity: high
   projectContext: greenfield
+lastEdited: '2026-04-10'
+editHistory:
+  - date: '2026-04-10'
+    changes: 'Intégration onboarding v3 & scoring par branche — 2 parcours réécrits, FR11/FR13/FR29/FR31 modifiées, FR42-48 ajoutées'
 ---
 
 # Product Requirements Document - JobFindeer
@@ -90,21 +94,25 @@ Le périmètre volontairement restreint (pas d'auto-apply, pas de tracking lourd
 
 **Scène d'ouverture :** Léa découvre JobFindeer via un post LinkedIn. Elle clique, atterrit sur la landing page mobile. "Moins de temps à chercher, plus de temps à postuler." Elle tape "Essai gratuit 7 jours".
 
-**Rising Action :** Création de compte (email + mot de passe ou OAuth Google). Écran suivant : "Upload ton CV pour qu'on comprenne ton profil." Elle uploade son PDF. En quelques secondes, le LLM extrait ses compétences, son expérience, sa localisation. L'app lui présente un résumé structuré : "React, TypeScript, 3 ans d'XP, Lyon". Elle valide et ajuste.
+**Rising Action :** Création de compte (email + mot de passe ou OAuth Google). Écran suivant : "Upload ton CV pour qu'on comprenne ton profil." Elle uploade son PDF. En quelques secondes, le LLM extrait ses compétences, son expérience, sa localisation, son employeur actuel. L'app lui présente un résumé structuré : "React, TypeScript, 3 ans d'XP, Lyon". Elle valide et ajuste.
 
-**Climax :** Écran de préférences : type de contrat (CDI), fourchette salariale (38-45k), télétravail (hybride), secteurs préférés (tech, healthtech, fintech), périmètre géo (Lyon + 30km). Elle valide en 2 minutes.
+Écran suivant — champ texte libre conversationnel : "Raconte-moi ce qui t'amène ici : ce que tu fais, ce que tu cherches, ce que tu veux éviter." Léa tape : "Je suis dev front React en CDI à Lyon, j'aime mon métier mais je veux plus de télétravail et un meilleur salaire, idéalement dans la healthtech." En quelques secondes, le LLM analyse son texte, le croise avec le CV, et la classe en branche 1 (même poste, en mieux) avec un score de confiance de 0.91.
 
-**Résolution :** "Ton premier feed sera prêt demain matin." Le lendemain, notification push. Elle ouvre : 15 offres scorées, classées par compatibilité. Le moment "aha" — c'est exactement ce qu'elle cherche, sans effort.
+**Climax :** L'app affiche une reformulation : "Si je comprends bien : tu cherches un poste similaire en développement frontend React, avec plus de télétravail, un meilleur salaire, et une préférence pour la healthtech. C'est ça ?" Léa tape "Oui exactement". C'est le moment waouh — l'IA a lu et compris en moins de 60 secondes.
+
+L'app enchaîne avec 3 questions de calibrage ciblées pour sa branche (axes d'amélioration prioritaires, salaire minimum acceptable, niveau de télétravail souhaité) puis le socle commun (localisation : Lyon + 30km, contrat : CDI, rythme : temps plein). 6 questions au total, validées en 2 minutes.
+
+**Résolution :** "Ton premier feed sera prêt demain matin." Le lendemain, notification email. Elle ouvre : 15 offres scorées, classées par compatibilité. Le moment "aha" — c'est exactement ce qu'elle cherche, sans effort.
 
 ### 3. Léa — Le scoring déçoit (edge case)
 
-**Scène d'ouverture :** Après 2 semaines, Léa constate que son feed remonte des offres de développeuse PHP et des postes juniors à 28k. Le scoring ne filtre pas assez bien.
+**Scène d'ouverture :** Après 2 semaines, Léa constate que son feed remonte des postes juniors à 28k et des offres 100% présentiel. Le scoring ne filtre pas assez bien ses critères de calibrage.
 
 **Rising Action :** Elle commence à swiper à gauche systématiquement. La lassitude s'installe.
 
-**Climax :** JobFindeer détecte le pattern (trop de swipes négatifs consécutifs) et lui propose : "Tes résultats ne te conviennent pas ? Ajuste tes préférences." Elle ajoute "PHP" en mot-clé négatif, remonte son salaire minimum à 35k.
+**Climax :** JobFindeer détecte le pattern (trop de swipes négatifs consécutifs) et lui propose : "Tes résultats ne te conviennent pas ? Ajuste tes préférences." Elle remonte son salaire minimum à 35k et passe son niveau de télétravail souhaité de "hybride" à "hybride majoritaire (3-4 jours)".
 
-**Résolution :** Le feed du lendemain est nettement plus pertinent. Note : au MVP, l'ajustement est manuel. Le volume de swipes (~100/mois) est trop faible pour un apprentissage automatique — piste V2+ si le volume le permet.
+**Résolution :** Le feed du lendemain est nettement plus pertinent — les filtres durs excluent les offres sous 35k et les critères mous rehaussent le score des offres avec davantage de télétravail. Note : au MVP, l'ajustement est manuel via les critères de calibrage existants. Le volume de swipes (~100/mois) est trop faible pour un apprentissage automatique — piste V2+ si le volume le permet.
 
 ### 4. Alexandre — Le dashboard ops (admin/monitoring)
 
@@ -123,8 +131,8 @@ Le périmètre volontairement restreint (pas d'auto-apply, pas de tracking lourd
 | Parcours | Capacités requises |
 |---|---|
 | Scroll quotidien (Léa) | Feed scoré mobile, swipe tri, métadonnées + score + justification, notifications push |
-| Onboarding (Léa) | Upload CV, extraction LLM, écran préférences, OAuth/email auth, essai 7 jours |
-| Scoring déçoit (Léa) | Paramètres ajustables, détection d'insatisfaction, mots-clés négatifs |
+| Onboarding (Léa) | Upload CV, extraction LLM, texte libre conversationnel, analyse LLM d'intention, reformulation validée, routage branche, calibrage conditionnel par branche, socle commun multi-mode (localisation, contrat, rythme), OAuth/email auth, essai 7 jours |
+| Scoring déçoit (Léa) | Paramètres de calibrage ajustables (salaire, télétravail, localisation), détection d'insatisfaction |
 | Archivage web (Léa) | Liste offres sauvegardées sur web, redirection vers source, état partagé mobile↔web |
 | Dashboard ops (Alexandre) | Monitoring par source, taux succès, alertes, logs erreurs, run de test manuel, métriques globales |
 
@@ -134,7 +142,7 @@ Le périmètre volontairement restreint (pas d'auto-apply, pas de tracking lourd
 
 - **RGPD :** registre des traitements, export de données utilisateur, droit à l'oubli implémenté dès le MVP — pas optionnel
 - **Scraping — règles non négociables :**
-  - Stocker uniquement les métadonnées (titre, entreprise, lieu, salaire, type contrat, URL source, date publication, hash contenu). Jamais la description complète
+  - Stocker les métadonnées (titre, entreprise, lieu, salaire, type contrat, URL source, date publication, hash contenu). La description brute peut être conservée temporairement pour le scoring lexical, purgée sous 30 jours, jamais affichée à l'utilisateur
   - Toujours rediriger vers la source pour la candidature. Pas de bouton "postuler" interne
   - Ne jamais contourner de protection technique (CAPTCHA, IP bans, fingerprinting). Si une source bloque, on s'arrête
   - Respecter robots.txt comme signal d'opposition
@@ -274,9 +282,14 @@ Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement ava
 - FR8 : Le candidat peut uploader son CV (PDF) lors de l'onboarding
 - FR9 : Le système peut extraire les compétences, expérience et localisation du CV via LLM
 - FR10 : Le candidat peut valider et ajuster le profil extrait par le LLM
-- FR11 : Le candidat peut définir ses préférences : type de contrat, fourchette salariale, télétravail, secteurs préférés, périmètre géographique
+- FR11 : Le candidat peut définir ses préférences via un socle commun : localisation multi-mode (villes avec rayon, « Partout en France », ou « Télétravail uniquement »), type de contrat, et rythme de travail — complété par des questions de calibrage spécifiques à sa branche d'intention
 - FR12 : Le candidat peut modifier ses préférences et son profil à tout moment
-- FR13 : Le candidat peut ajouter des mots-clés négatifs pour exclure certaines offres
+- FR13 : Le système exclut automatiquement l'employeur actuel du candidat (identifié via le CV) lorsque celui-ci sélectionne « Une entreprise différente de la mienne » dans ses axes d'amélioration (branche 1). Pas de champ d'exclusion libre au MVP
+- FR42 : Le candidat peut saisir un texte libre conversationnel (100-500 caractères) décrivant sa situation et ce qu'il recherche
+- FR43 : Le système analyse le texte libre via LLM pour classifier le candidat dans l'une des 5 branches d'intention avec un score de confiance
+- FR44 : Le système affiche une reformulation de l'intention détectée que le candidat peut valider, corriger ou rejeter. Si score de confiance < 0.7, choix manuel de branche
+- FR45 : Le système adapte les questions de calibrage en fonction de la branche retenue (1 à 3 questions spécifiques + socle commun S1-S3)
+- FR46 : Le système stocke les signaux d'interaction utilisateur dès le MVP : impressions, clics détail, sauvegardes, ignorées, redirections candidature
 
 ### Feed & Découverte d'Offres
 
@@ -301,14 +314,19 @@ Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement ava
 - FR26 : Le système peut normaliser les offres collectées (titre, entreprise, localisation, salaire, contrat)
 - FR27 : Le système peut dédupliquer les offres cross-sources via hash normalisé
 - FR28 : Le système peut purger les offres expirées automatiquement (rétention courte)
-- FR29 : Le système stocke uniquement les métadonnées des offres, jamais la description complète
+- FR29 : Le système stocke les métadonnées des offres et conserve temporairement la description brute pour le scoring lexical (purgée automatiquement après 30 jours). La description n'est jamais affichée à l'utilisateur
 - FR30 : Le système respecte robots.txt et s'arrête si une source bloque techniquement
 
 ### Scoring & Matching
 
-- FR31 : Le système peut scorer chaque offre par rapport à un profil candidat selon des règles pondérées (mots-clés, salaire, localisation, contrat, expérience)
+- FR31 : Le système score chaque offre via deux catégories de critères : des filtres durs (localisation + distance, type de contrat, salaire minimum déclaré, télétravail strict) pesant collectivement 60-70% du score, et des critères mous à pondération variable selon la branche d'intention du candidat pesant 30-40%
 - FR32 : Le système génère un feed pré-calculé par profil via pipeline batch nocturne
 - FR33 : Le système fournit une justification courte du score pour chaque offre
+
+### Scoring Lexical & Filtres Spécialisés
+
+- FR47 : Le système applique une approche lexicale déterministe (mots-clés dans le titre, sac de mots-clés descriptif, comparaison de séniorité) pour les critères flous, avec une pondération plafonnée à 5-8% du score global et sans filtre dur
+- FR48 : Le système applique automatiquement un filtre required_experience_years = 0 pour les candidats en branche reconversion (branche 4), excluant les offres qui exigent de l'expérience sur le métier cible
 
 ### Dashboard Ops (Admin)
 
@@ -320,7 +338,7 @@ Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement ava
 
 ### Conformité & Juridique
 
-- FR39 : Le système peut traiter une demande de cessation de scraping d'une source dans un délai rapide
+- FR39 : Le système peut traiter une demande de cessation de scraping d'une source dans un délai de 48h ouvrées
 - FR40 : Le système peut désactiver une source de collecte sans impact sur les autres sources
 - FR41 : Le système conserve les logs de redirection comme preuve de loyauté
 
@@ -338,9 +356,9 @@ Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement ava
 ### Sécurité
 
 - NFR7 : Données chiffrées en transit (HTTPS/TLS)
-- NFR8 : Données sensibles (CV, profil) chiffrées au repos dans Postgres
-- NFR9 : Mots de passe hashés avec bcrypt ou argon2
-- NFR10 : Tokens de session expirent après inactivité prolongée
+- NFR8 : Données sensibles (CV, profil) chiffrées au repos en base de données
+- NFR9 : Mots de passe hashés avec un algorithme standard résistant aux attaques par force brute
+- NFR10 : Tokens de session expirent après 30 minutes d'inactivité
 - NFR11 : Paiements délégués à Stripe — aucune donnée bancaire stockée par JobFindeer
 - NFR12 : Secrets (clés API, tokens) jamais exposés côté client ni commités
 
@@ -353,9 +371,9 @@ Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement ava
 
 ### Fiabilité
 
-- NFR17 : Disponibilité > 99% (hors maintenance planifiée)
+- NFR17 : Disponibilité > 99% hors maintenance planifiée, mesurée par uptime monitoring mensuel
 - NFR18 : Si une source échoue, les autres continuent (isolation des erreurs)
-- NFR19 : Backup Postgres quotidien des données utilisateur
+- NFR19 : Backup quotidien de la base de données utilisateur
 - NFR20 : Panne du pipeline n'empêche pas la consultation du feed existant
 
 ### Accessibilité
@@ -369,12 +387,12 @@ Cible 15% essai → payant. Si < 5%, pivoter le pricing ou le positionnement ava
 
 - NFR25 : API France Travail via OAuth2 client_credentials avec refresh automatique
 - NFR26 : Stripe webhooks pour synchronisation des états d'abonnement (essai → payant → annulé → expiré)
-- NFR27 : LLM (Gemini) via couche d'abstraction permettant de changer de provider
+- NFR27 : LLM via couche d'abstraction permettant de changer de provider sans impact applicatif
 - NFR28 : Chaque intégration externe gère les erreurs réseau sans crasher le service
 
 ### Observabilité
 
 - NFR29 : Logs structurés par run du pipeline (offres collectées, filtrées, dédupliquées, scorées, par source)
 - NFR30 : Alerte automatique si taux de succès d'une source < 50%
-- NFR31 : Error tracking centralisé (Sentry) frontend et backend
+- NFR31 : Error tracking centralisé frontend et backend
 - NFR32 : Métriques business : utilisateurs actifs, taux de swipe positif, taux de redirection

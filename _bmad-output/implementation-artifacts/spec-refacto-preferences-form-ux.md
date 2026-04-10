@@ -2,7 +2,8 @@
 title: 'Refacto préférences : multi-select contrats, autocomplete localisation Google Places avec rayon par ville'
 type: 'feature'
 created: '2026-04-10'
-status: 'done'
+status: 'needs-rewrite'
+rewriteReason: 'Sprint Change Proposal 2026-04-10 — Google Places → API BAN, formulaire plat → socle commun + calibrage par branche, suppression secteurs et mots-clés négatifs, ajout location_mode 3 modes.'
 baseline_commit: 'a4c6418'
 context: []
 ---
