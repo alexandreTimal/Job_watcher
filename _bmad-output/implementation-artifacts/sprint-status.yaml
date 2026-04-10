@@ -75,11 +75,11 @@ development_status:
   epic-3-retrospective: optional
 
   # Epic 4 : Scoring, Feed & Experience Mobile (scoring reecrit — filtres durs/mous/lexical par branche)
-  epic-4: backlog
-  4-1-moteur-de-scoring-filtres-durs-criteres-mous-par-branche: backlog
-  4-2-generation-du-feed-pre-calcule-par-profil: backlog
-  4-3-api-trpc-feed-swipe: backlog
-  4-4-interface-swipe-mobile-pwa: backlog
+  epic-4: done
+  4-1-moteur-de-scoring-filtres-durs-criteres-mous-par-branche: done
+  4-2-generation-du-feed-pre-calcule-par-profil: done
+  4-3-api-trpc-feed-swipe: done
+  4-4-interface-swipe-mobile-pwa: done
   epic-4-retrospective: optional
 
   # Epic 5 : Experience Desktop & Archivage
