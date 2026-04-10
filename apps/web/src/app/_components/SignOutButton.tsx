@@ -6,7 +6,7 @@ export function SignOutButton() {
   return (
     <button
       type="button"
-      onClick={() => signOut({ callbackUrl: "/" })}
+      onClick={() => signOut({ callbackUrl: "/login" })}
       className="hover:text-primary"
     >
       Déconnexion

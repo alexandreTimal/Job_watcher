@@ -1,5 +1,7 @@
+import "./types";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
@@ -25,6 +27,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     newUser: "/onboarding",
   },
   providers: [
+    Google({ allowDangerousEmailAccountLinking: true }),
     Credentials({
       credentials: {
         email: { type: "email" },
@@ -57,10 +60,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
+  events: {
+    createUser: async ({ user }) => {
+      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await db
+        .update(users)
+        .set({ trialEndsAt })
+        .where(eq(users.id, user.id!));
+    },
+  },
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: async ({ token, user, trigger }) => {
       if (user) {
         token.id = user.id;
+      }
+      // Fetch role and trialEndsAt from DB on sign-in or token refresh
+      if (trigger === "signIn" || trigger === "signUp" || !token.role) {
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, token.id as string),
+          columns: { role: true, trialEndsAt: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.trialEndsAt = dbUser.trialEndsAt?.toISOString() ?? null;
+        }
       }
       return token;
     },
@@ -68,6 +91,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.id) {
         session.user.id = token.id as string;
       }
+      session.user.role = token.role as string;
+      session.user.trialEndsAt = token.trialEndsAt as string | null;
       return session;
     },
   },

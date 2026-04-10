@@ -11,6 +11,30 @@ export const createQueryClient = () =>
         // With SSR, we usually want to set some default staleTime
         // above 0 to avoid refetching immediately on the client
         staleTime: 30 * 1000,
+        retry: (failureCount, error) => {
+          // Don't retry on trial expired
+          if (
+            error.message === "TRIAL_EXPIRED"
+          ) {
+            if (typeof window !== "undefined") {
+              window.location.href = "/pricing";
+            }
+            return false;
+          }
+          return failureCount < 3;
+        },
+      },
+      mutations: {
+        onError: (error) => {
+          if (
+            typeof window !== "undefined" &&
+            "data" in error &&
+            (error as { data?: { code?: string } }).data?.code === "FORBIDDEN" &&
+            error.message === "TRIAL_EXPIRED"
+          ) {
+            window.location.href = "/pricing";
+          }
+        },
       },
       dehydrate: {
         serializeData: SuperJSON.serialize,

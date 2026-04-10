@@ -50,9 +50,9 @@ development_status:
   epic-0-retrospective: optional
 
   # Epic 1 : Authentification & Inscription
-  epic-1: backlog
-  1-1-authentification-auth-js-email-oauth-google: backlog
-  1-2-essai-gratuit-7-jours-roles-utilisateur: backlog
+  epic-1: done
+  1-1-authentification-auth-js-email-oauth-google: done
+  1-2-essai-gratuit-7-jours-roles-utilisateur: done
   epic-1-retrospective: optional
 
   # Epic 2 : Pipeline de Collecte & Traitement des Offres (enrichi — geocodage, remote_type, experience_years, description_raw)

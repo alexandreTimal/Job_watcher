@@ -34,12 +34,14 @@ export async function POST(req: NextRequest) {
   const hashedPassword = await bcrypt.hash(password, 12);
 
   try {
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const [user] = await db
       .insert(users)
       .values({
         name: name?.trim() || null,
         email: email.toLowerCase().trim(),
         hashedPassword,
+        trialEndsAt,
       })
       .returning({ id: users.id });
 

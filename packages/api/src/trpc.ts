@@ -69,6 +69,38 @@ export const protectedProcedure = t.procedure
     if (!ctx.session?.user?.id) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
+
+    // Admins bypass trial check
+    const { trialEndsAt, role } = ctx.session.user;
+    const isAdmin = role === "admin";
+    const trialActive = trialEndsAt && new Date(trialEndsAt) > new Date();
+    // TODO(Epic 6): Add subscription check here
+    if (!isAdmin && !trialActive) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "TRIAL_EXPIRED",
+      });
+    }
+
+    return next({
+      ctx: {
+        session: {
+          ...ctx.session,
+          user: { ...ctx.session.user, id: ctx.session.user.id },
+        },
+      },
+    });
+  });
+
+export const adminProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (ctx.session.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
     return next({
       ctx: {
         session: {
