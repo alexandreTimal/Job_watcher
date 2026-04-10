@@ -1,8 +1,14 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 
 import { userProfiles, userPreferences } from "@jobfindeer/db/schema";
-import { preferencesSchema, extractedProfileSchema } from "@jobfindeer/validators";
+import {
+  preferencesSchema,
+  extractedProfileSchema,
+  freeTextSchema,
+  branchEnum,
+} from "@jobfindeer/validators";
 
 import { protectedProcedure } from "../trpc";
 
@@ -85,6 +91,27 @@ export const profileRouter = {
           ...input,
         });
       }
+
+      return { success: true };
+    }),
+  saveBranch: protectedProcedure
+    .input(
+      z.object({
+        branch: branchEnum,
+        freeTextRaw: z.string().optional(),
+        calibrationAnswers: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(userProfiles)
+        .set({
+          branch: input.branch,
+          freeTextRaw: input.freeTextRaw,
+          calibrationAnswers: input.calibrationAnswers,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, ctx.session.user.id));
 
       return { success: true };
     }),
