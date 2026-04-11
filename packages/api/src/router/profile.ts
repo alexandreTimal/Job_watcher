@@ -1,4 +1,5 @@
 import type { TRPCRouterRecord } from "@trpc/server";
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 
@@ -15,6 +16,7 @@ import {
   extractedProfileSchema,
   freeTextSchema,
   branchEnum,
+  searchTitlesDataSchema,
 } from "@jobfindeer/validators";
 
 import { protectedProcedure } from "../trpc";
@@ -116,6 +118,33 @@ export const profileRouter = {
           branch: input.branch,
           freeTextRaw: input.freeTextRaw,
           calibrationAnswers: input.calibrationAnswers,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, ctx.session.user.id));
+
+      return { success: true };
+    }),
+
+  saveSearchTitles: protectedProcedure
+    .input(searchTitlesDataSchema)
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db
+        .select({ id: userProfiles.id })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, ctx.session.user.id))
+        .limit(1);
+
+      if (existing.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Profil introuvable. Completez d'abord l'onboarding.",
+        });
+      }
+
+      await ctx.db
+        .update(userProfiles)
+        .set({
+          searchTitles: input,
           updatedAt: new Date(),
         })
         .where(eq(userProfiles.userId, ctx.session.user.id));

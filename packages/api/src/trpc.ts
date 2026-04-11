@@ -71,11 +71,12 @@ export const protectedProcedure = t.procedure
     }
 
     // Admins bypass trial check
+    const billingDisabled = process.env.DISABLE_BILLING === "true";
     const { trialEndsAt, role } = ctx.session.user;
     const isAdmin = role === "admin";
     const trialActive = trialEndsAt && new Date(trialEndsAt) > new Date();
     // TODO(Epic 6): Add subscription check here
-    if (!isAdmin && !trialActive) {
+    if (!billingDisabled && !isAdmin && !trialActive) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "TRIAL_EXPIRED",
