@@ -66,3 +66,29 @@ context: []
 - Ouvrir /onboarding avec un compte ayant un profil complet → doit sauter aux titles
 - Ouvrir /onboarding avec un compte vierge → doit commencer à upload
 - Cliquer sur une pastille d'étape complétée → doit naviguer vers cette étape
+
+## Suggested Review Order
+
+**Logique de reprise (coeur de la feature)**
+
+- Calcul séquentiel des étapes complètes depuis les données serveur — exige `freeTextRaw` avant de marquer "freetext"
+  [`page.tsx:46`](../../apps/web/src/app/(mobile)/onboarding/page.tsx#L46)
+
+- Hydratation au premier chargement : pré-remplit l'état local et saute à la première étape incomplète
+  [`page.tsx:104`](../../apps/web/src/app/(mobile)/onboarding/page.tsx#L104)
+
+- Navigation sûre vers "intent" — force `showBranchSelect` si pas d'`intentResult`
+  [`page.tsx:314`](../../apps/web/src/app/(mobile)/onboarding/page.tsx#L314)
+
+**Barre de progression cliquable**
+
+- Pastilles devenues `<button>` cliquables vers les étapes complétées, avec feedback visuel
+  [`page.tsx:336`](../../apps/web/src/app/(mobile)/onboarding/page.tsx#L336)
+
+**Bouton "Passer"**
+
+- Skip gardé : désactivé sur le dernier step, utilise `goToStep` pour la sécurité "intent"
+  [`page.tsx:464`](../../apps/web/src/app/(mobile)/onboarding/page.tsx#L464)
+
+- StepNavigation étendu avec `canSkip`/`onSkip` — bouton "Passer" en `variant="ghost"`
+  [`StepNavigation.tsx:11`](../../apps/web/src/app/(mobile)/onboarding/_components/StepNavigation.tsx#L11)
