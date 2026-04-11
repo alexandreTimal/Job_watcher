@@ -3,8 +3,10 @@
 import { useState, useRef, useCallback } from "react";
 import { useTRPC } from "~/trpc/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Preferences } from "@jobfindeer/validators";
+import type { Preferences, SearchTitle, SearchTitleWithActive } from "@jobfindeer/validators";
 import { PreferencesEditor } from "./_components/PreferencesEditor";
+import { TitleValidation } from "../../(mobile)/onboarding/_components/TitleValidation";
+import { buildTitleGenParams } from "~/lib/title-params";
 
 export default function SettingsPage() {
   const trpc = useTRPC();
@@ -114,8 +116,149 @@ export default function SettingsPage() {
         saving={updatePrefs.isPending}
       />
 
+      {/* Search Titles Section */}
+      <SearchTitlesSection
+        profile={profile}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: trpc.profile.get.queryKey() })}
+      />
+
       {/* Pipeline Trigger Section */}
       <PipelineTrigger />
+    </div>
+  );
+}
+
+function SearchTitlesSection({
+  profile,
+  onSaved,
+}: {
+  profile: Record<string, unknown> | null | undefined;
+  onSaved: () => void;
+}) {
+  const trpc = useTRPC();
+  const [regenerating, setRegenerating] = useState(false);
+  const [newTitles, setNewTitles] = useState<SearchTitle[] | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const saveMutation = useMutation(
+    trpc.profile.saveSearchTitles.mutationOptions(),
+  );
+
+  const searchTitles = profile?.searchTitles as {
+    generated_at: string;
+    branch_used: string;
+    titles: SearchTitleWithActive[];
+  } | null;
+
+  const activeTitles = searchTitles?.titles.filter((t) => t.active) ?? [];
+
+  async function handleRegenerate() {
+    if (!profile?.branch) return;
+    setRegenerating(true);
+    setNewTitles(null);
+    try {
+      const res = await fetch("/api/generate-titles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          params: buildTitleGenParams(
+            String(profile?.branch),
+            {
+              currentTitle: profile?.currentTitle as string | null,
+              experienceYears: profile?.experienceYears as number | null,
+              educationLevel: profile?.educationLevel as string | null,
+            },
+            profile?.calibrationAnswers as Record<string, unknown> | null,
+          ),
+        }),
+      });
+      const data = await res.json();
+      setNewTitles(data.titles ?? []);
+    } catch {
+      setNewTitles([]);
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  async function handleSaveNew(validated: SearchTitleWithActive[]) {
+    if (!profile?.branch) return;
+    setSaving(true);
+    try {
+      await saveMutation.mutateAsync({
+        generated_at: new Date().toISOString(),
+        branch_used: profile.branch as "1" | "2" | "3" | "4" | "5",
+        titles: validated,
+      });
+      setNewTitles(null);
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-10">
+      <h2 className="mb-4 text-xl font-bold">Titres de recherche</h2>
+      <div className="rounded-lg border p-6">
+        {activeTitles.length > 0 ? (
+          <>
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {activeTitles.map((t, i) => (
+                <span
+                  key={i}
+                  className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {t.fr ?? t.en}
+                </span>
+              ))}
+            </div>
+            <p className="text-muted-foreground mb-4 text-xs">
+              {activeTitles.length} titres actifs — generes le{" "}
+              {new Date(searchTitles!.generated_at).toLocaleDateString("fr-FR")}
+            </p>
+          </>
+        ) : (
+          <p className="text-muted-foreground mb-4 text-sm">
+            Aucun titre de recherche configure.
+          </p>
+        )}
+
+        {searchTitles && Boolean(profile?.branch) && searchTitles.branch_used !== String(profile?.branch) && newTitles === null && (
+          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              Ton profil a change depuis la derniere generation de titres. Veux-tu regenerer la liste ?
+            </p>
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              className="bg-amber-600 hover:bg-amber-700 mt-2 rounded-md px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {regenerating ? "Generation..." : "Regenerer mes titres"}
+            </button>
+          </div>
+        )}
+
+        {newTitles !== null ? (
+          <TitleValidation
+            titles={newTitles}
+            onComplete={handleSaveNew}
+            loading={saving}
+          />
+        ) : (
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating || !profile?.branch}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {regenerating
+              ? "Generation en cours..."
+              : activeTitles.length > 0
+                ? "Modifier mes titres de recherche"
+                : "Generer mes titres de recherche"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

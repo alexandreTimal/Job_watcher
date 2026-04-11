@@ -162,6 +162,17 @@ export function LocationPicker({
         </div>
       )}
 
+      {/* France entière shortcut */}
+      {!locations.some((l) => l.label === "France entière") && (
+        <button
+          type="button"
+          onClick={() => addLocation("France entière")}
+          className="border-input hover:bg-accent rounded-md border px-3 py-2 text-left text-sm transition-colors"
+        >
+          + France entière
+        </button>
+      )}
+
       {/* Autocomplete input */}
       <div className="relative">
         <input
