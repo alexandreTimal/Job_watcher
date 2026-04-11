@@ -6,3 +6,4 @@ export {
   pgEncryptJson,
   pgDecryptJson,
 } from "./crypto";
+export * from "./schema/index";

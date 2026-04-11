@@ -37,6 +37,11 @@ export const userProfiles = pgTable("user_profiles", {
   freeTextRaw: text("free_text_raw"),
   calibrationAnswers: jsonb("calibration_answers"),
   currentEmployer: text("current_employer"),
+  searchTitles: jsonb("search_titles").$type<{
+    generated_at: string;
+    branch_used: "1" | "2" | "3" | "4" | "5";
+    titles: { fr: string | null; en: string | null; active: boolean }[];
+  }>(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
