@@ -34,6 +34,7 @@ export const branch2CalibrationSchema = z.object({
 export const branch3CalibrationSchema = z.object({
   pivotJobs: z.array(z.string()).min(1),
   salaryDropTolerance: z.enum(["none", "up_to_10", "up_to_20", "more_than_20"]),
+  trainingWillingness: z.enum(["self_learning", "employer_paid", "none"]).default("none"),
 });
 
 export const branch4CalibrationSchema = z.object({
@@ -42,7 +43,7 @@ export const branch4CalibrationSchema = z.object({
 });
 
 export const branch5CalibrationSchema = z.object({
-  contractType: z.enum(["alternance", "stage"]),
+  contractType: z.enum(["alternance", "stage", "first_job"]),
   studyField: z.string().min(1),
 });
 
@@ -53,3 +54,29 @@ export const calibrationByBranchSchemas = {
   "4": branch4CalibrationSchema,
   "5": branch5CalibrationSchema,
 } as const;
+
+// Search titles schemas
+export const searchTitleSchema = z.object({
+  fr: z.string().nullable(),
+  en: z.string().nullable(),
+});
+
+export type SearchTitle = z.infer<typeof searchTitleSchema>;
+
+export const searchTitleWithActiveSchema = searchTitleSchema.extend({
+  active: z.boolean(),
+});
+
+export type SearchTitleWithActive = z.infer<typeof searchTitleWithActiveSchema>;
+
+export const searchTitlesDataSchema = z.object({
+  generated_at: z.string(),
+  branch_used: branchEnum,
+  titles: z.array(searchTitleWithActiveSchema),
+});
+
+export type SearchTitlesData = z.infer<typeof searchTitlesDataSchema>;
+
+export const llmTitleOutputSchema = z.object({
+  titles: z.array(searchTitleSchema),
+});
