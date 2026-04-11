@@ -1,5 +1,5 @@
 # generated: 2026-04-09
-# last_updated: 2026-04-12
+# last_updated: 2026-04-11
 # project: Job_watcher
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-09
-last_updated: 2026-04-12
+last_updated: 2026-04-11
 project: Job_watcher
 project_key: NOKEY
 tracking_system: file-system
@@ -101,3 +101,8 @@ development_status:
   7-2-logs-erreur-alertes-automatiques-run-de-test: done
   7-3-notifications-email-quotidiennes: done
   epic-7-retrospective: optional
+
+  # Epic 8 : Generation des Titres de Poste
+  epic-8: in-progress
+  8-1-generation-titres-de-poste: review
+  epic-8-retrospective: optional
