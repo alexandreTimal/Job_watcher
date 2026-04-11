@@ -6,6 +6,7 @@ import { analyzeIntent } from "~/lib/intent-analyzer";
 
 const requestSchema = z.object({
   freeText: z.string().min(100).max(500),
+  model: z.string().optional(),
   profile: z
     .object({
       currentTitle: z.string().nullable(),
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     const result = await analyzeIntent(
       parsed.data.freeText,
       parsed.data.profile as Parameters<typeof analyzeIntent>[1],
+      parsed.data.model,
     );
     return NextResponse.json(result);
   } catch (err) {

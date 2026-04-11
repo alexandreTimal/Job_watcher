@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod/v4";
 import type { ExtractedProfile } from "@jobfindeer/validators";
+import { MODEL_CONFIG } from "./model-config";
 
 const BRANCHES = `
 Branche 1 — Même poste, en mieux : cherche un poste similaire mais avec de meilleures conditions (salaire, télétravail, management, environnement).
@@ -24,16 +25,37 @@ const intentSchema = z.object({
 
 export type IntentResult = z.infer<typeof intentSchema>;
 
+export interface IntentMetrics {
+  model: string;
+  modelLabel: string;
+  durationMs: number;
+  tokensIn: number;
+  tokensOut: number;
+  tokensTotal: number;
+  costUsd: number;
+  rawOutput: unknown;
+}
+
+export interface IntentAnalysisResult {
+  intent: IntentResult;
+  metrics: IntentMetrics;
+}
+
 export async function analyzeIntent(
   freeText: string,
   profile: ExtractedProfile | null,
-): Promise<IntentResult> {
+  modelId?: string,
+): Promise<IntentAnalysisResult> {
+  const resolvedModel = modelId ?? "gemini-2.5-flash";
+  const config = MODEL_CONFIG[resolvedModel] ?? { label: resolvedModel, pricing: { input: 0.15, output: 0.60 } };
+
   const profileContext = profile
     ? `Résumé CV : ${profile.currentTitle ?? "inconnu"}, ${profile.experienceYears ?? "?"} ans d'expérience, compétences : ${[...profile.hardSkills, ...profile.softSkills].slice(0, 10).join(", ")}.`
     : "Pas de CV fourni.";
 
+  const start = Date.now();
   const result = await generateText({
-    model: google("gemini-2.5-flash"),
+    model: google(resolvedModel),
     providerOptions: {
       google: {
         structuredOutputs: false,
@@ -55,7 +77,28 @@ Retourne un JSON avec :
 - "summary": reformulation empathique en 1-2 phrases
 - "signals": { "constraints": [...], "tone": "...", "keywords": [...] }`,
   });
+  const durationMs = Date.now() - start;
 
-  const parsed = intentSchema.parse(JSON.parse(result.text));
-  return parsed;
+  const cleaned = result.text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+  const rawJson = JSON.parse(cleaned);
+  const parsed = intentSchema.parse(rawJson);
+
+  const usage = result.usage as Record<string, unknown> | undefined;
+  const tokensIn = (usage?.promptTokens ?? usage?.input_tokens ?? usage?.inputTokens ?? 0) as number;
+  const tokensOut = (usage?.completionTokens ?? usage?.output_tokens ?? usage?.outputTokens ?? 0) as number;
+  const costUsd = (tokensIn / 1_000_000) * config.pricing.input + (tokensOut / 1_000_000) * config.pricing.output;
+
+  return {
+    intent: parsed,
+    metrics: {
+      model: resolvedModel,
+      modelLabel: config.label,
+      durationMs,
+      tokensIn,
+      tokensOut,
+      tokensTotal: tokensIn + tokensOut,
+      costUsd,
+      rawOutput: rawJson,
+    },
+  };
 }
