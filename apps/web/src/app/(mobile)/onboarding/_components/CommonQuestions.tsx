@@ -6,6 +6,7 @@ interface CommonQuestionsProps {
   branch: string;
   onComplete: (prefs: CommonPrefs) => void;
   loading?: boolean;
+  calibrationContractType?: string | null;
 }
 
 export interface CommonPrefs {
@@ -22,13 +23,18 @@ export function CommonQuestions({
   branch,
   onComplete,
   loading,
+  calibrationContractType,
 }: CommonQuestionsProps) {
   const [locationMode, setLocationMode] = useState<CommonPrefs["locationMode"]>("cities");
   const [cityInput, setCityInput] = useState("");
   const [cities, setCities] = useState<string[]>([]);
   const [remoteFriendly, setRemoteFriendly] = useState(false);
+
+  const defaultContract = branch === "5"
+    ? calibrationContractType === "stage" ? "Stage" : "Alternance"
+    : null;
   const [contractTypes, setContractTypes] = useState<string[]>(
-    branch === "5" ? ["Alternance"] : [],
+    defaultContract ? [defaultContract] : [],
   );
   const [workSchedule, setWorkSchedule] = useState<CommonPrefs["workSchedule"]>("full_time");
 

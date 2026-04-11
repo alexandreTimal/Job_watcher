@@ -14,12 +14,14 @@ interface BranchCalibrationProps {
   branch: string;
   onComplete: (answers: Record<string, unknown>) => void;
   loading?: boolean;
+  studyFieldHint?: string | null;
 }
 
 export function BranchCalibration({
   branch,
   onComplete,
   loading,
+  studyFieldHint,
 }: BranchCalibrationProps) {
   return (
     <div className="space-y-6">
@@ -30,7 +32,7 @@ export function BranchCalibration({
       {branch === "2" && <Branch2Form onComplete={onComplete} loading={loading} />}
       {branch === "3" && <Branch3Form onComplete={onComplete} loading={loading} />}
       {branch === "4" && <Branch4Form onComplete={onComplete} loading={loading} />}
-      {branch === "5" && <Branch5Form onComplete={onComplete} loading={loading} />}
+      {branch === "5" && <Branch5Form onComplete={onComplete} loading={loading} studyFieldHint={studyFieldHint} />}
     </div>
   );
 }
@@ -195,6 +197,7 @@ function Branch2Form({ onComplete, loading }: { onComplete: (a: Record<string, u
 function Branch3Form({ onComplete, loading }: { onComplete: (a: Record<string, unknown>) => void; loading?: boolean }) {
   const [pivotJobs, setPivotJobs] = useState("");
   const [tolerance, setTolerance] = useState("up_to_10");
+  const [training, setTraining] = useState("none");
 
   return (
     <div className="space-y-4">
@@ -235,6 +238,30 @@ function Branch3Form({ onComplete, loading }: { onComplete: (a: Record<string, u
         </div>
       </div>
 
+      <div>
+        <label className="mb-2 block text-sm font-medium">
+          Formation pour ce nouveau metier
+        </label>
+        <div className="flex flex-col gap-1.5">
+          {[
+            { value: "self_learning", label: "Je me forme deja par moi-meme" },
+            { value: "employer_paid", label: "Oui, si l'employeur la prend en charge" },
+            { value: "none", label: "Non, je veux etre recrute sur mes competences actuelles" },
+          ].map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="training"
+                value={opt.value}
+                checked={training === opt.value}
+                onChange={(e) => setTraining(e.target.value)}
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
       <SubmitButton
         disabled={!pivotJobs.trim() || loading}
         loading={loading}
@@ -245,6 +272,7 @@ function Branch3Form({ onComplete, loading }: { onComplete: (a: Record<string, u
               .map((j) => j.trim())
               .filter(Boolean),
             salaryDropTolerance: tolerance,
+            trainingWillingness: training,
           })
         }
       />
@@ -256,6 +284,7 @@ function Branch3Form({ onComplete, loading }: { onComplete: (a: Record<string, u
 function Branch4Form({ onComplete, loading }: { onComplete: (a: Record<string, unknown>) => void; loading?: boolean }) {
   const [maturity, setMaturity] = useState<string | null>(null);
   const [level, setLevel] = useState("both");
+  const [targetJobs, setTargetJobs] = useState("");
 
   if (maturity === "not_yet") {
     return (
@@ -303,9 +332,21 @@ function Branch4Form({ onComplete, loading }: { onComplete: (a: Record<string, u
       </div>
 
       {maturity && maturity !== "not_yet" && (
+        <>
         <div>
           <label className="mb-2 block text-sm font-medium">
-            Niveau accepté dans le nouveau domaine
+            Metiers cibles
+          </label>
+          <textarea
+            value={targetJobs}
+            onChange={(e) => setTargetJobs(e.target.value)}
+            placeholder="Ex: Boulanger, Electricien, Developpeur web..."
+            className="border-input bg-background min-h-[80px] w-full rounded-md border p-3 text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium">
+            Niveau accepte dans le nouveau domaine
           </label>
           <div className="flex flex-col gap-1.5">
             {[
@@ -332,15 +373,20 @@ function Branch4Form({ onComplete, loading }: { onComplete: (a: Record<string, u
             ))}
           </div>
         </div>
+        </>
       )}
 
       <SubmitButton
-        disabled={!maturity || loading}
+        disabled={!maturity || (maturity !== "not_yet" && !targetJobs.trim()) || loading}
         loading={loading}
         onClick={() =>
           onComplete({
             maturity,
             acceptedLevel: level,
+            targetJobs: targetJobs
+              .split(",")
+              .map((j) => j.trim())
+              .filter(Boolean),
           })
         }
       />
@@ -349,9 +395,9 @@ function Branch4Form({ onComplete, loading }: { onComplete: (a: Record<string, u
 }
 
 // --- Branch 5: Alternance/Stage ---
-function Branch5Form({ onComplete, loading }: { onComplete: (a: Record<string, unknown>) => void; loading?: boolean }) {
+function Branch5Form({ onComplete, loading, studyFieldHint }: { onComplete: (a: Record<string, unknown>) => void; loading?: boolean; studyFieldHint?: string | null }) {
   const [contractType, setContractType] = useState("alternance");
-  const [studyField, setStudyField] = useState("");
+  const [studyField, setStudyField] = useState(studyFieldHint ?? "");
 
   return (
     <div className="space-y-4">
@@ -363,6 +409,7 @@ function Branch5Form({ onComplete, loading }: { onComplete: (a: Record<string, u
           {[
             { value: "alternance", label: "Alternance" },
             { value: "stage", label: "Stage" },
+            { value: "first_job", label: "Premier emploi / CDI" },
           ].map((opt) => (
             <label key={opt.value} className="flex items-center gap-2 text-sm">
               <input
