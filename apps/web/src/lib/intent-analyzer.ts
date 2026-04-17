@@ -4,14 +4,7 @@ import { z } from "zod/v4";
 import type { ExtractedProfile } from "@jobfindeer/validators";
 import type { ModelId } from "./model-config";
 import { MODEL_CONFIG, isAvailableModel } from "./model-config";
-
-const BRANCHES = `
-Branche 1 — Même poste, en mieux : cherche un poste similaire mais avec de meilleures conditions (salaire, télétravail, management, environnement).
-Branche 2 — Monter en responsabilités : veut évoluer vers plus de responsabilités, management, lead technique, etc.
-Branche 3 — Changer de métier : souhaite pivoter vers un autre métier tout en valorisant son expérience.
-Branche 4 — Reconversion : en reconversion profonde, change complètement de domaine.
-Branche 5 — Alternance/Stage : étudiant ou en formation, cherche un contrat en alternance ou un stage.
-`;
+import { buildIntentAnalysisPrompt } from "./prompts";
 
 const intentSchema = z.object({
   branch: z.enum(["1", "2", "3", "4", "5"]),
@@ -63,20 +56,7 @@ export async function analyzeIntent(
         responseMimeType: "application/json",
       },
     },
-    prompt: `Tu es un conseiller emploi bienveillant. Analyse le texte libre d'un candidat et classe-le dans une des 5 branches d'intention.
-
-${BRANCHES}
-
-${profileContext}
-
-Texte du candidat :
-"${freeText}"
-
-Retourne un JSON avec :
-- "branch": "1"|"2"|"3"|"4"|"5"
-- "confidence": nombre entre 0 et 1
-- "summary": reformulation empathique en 1-2 phrases
-- "signals": { "constraints": [...], "tone": "...", "keywords": [...] }`,
+    prompt: buildIntentAnalysisPrompt({ freeText, profileContext }),
   });
   const durationMs = Date.now() - start;
 
