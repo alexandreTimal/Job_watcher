@@ -2,9 +2,11 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import type { SearchTitle } from "@jobfindeer/validators";
 import { llmTitleOutputSchema } from "@jobfindeer/validators";
-import { MODEL_CONFIG } from "./model-config";
+import type { ModelId } from "./model-config";
+import { MODEL_CONFIG, isAvailableModel } from "./model-config";
 
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_MODEL: ModelId = "gemini-2.5-flash-lite";
+const LLM_TIMEOUT_MS = 20_000;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,15 +73,24 @@ Imagine you are a recruiter who has seen thousands of French job ads. Your list 
 // Input sanitization (prompt injection mitigation)
 // ---------------------------------------------------------------------------
 
-function sanitize(input: string): string {
+function sanitize(input: unknown): string {
+  if (typeof input !== "string") return "";
   return input
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars
-    .slice(0, 200) // truncate to reasonable length
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .replace(/<\s*\/?\s*user_input\s*>/gi, "")
+    .replace(/[<>]/g, "")
+    .slice(0, 200)
     .trim();
 }
 
-function sanitizeArray(inputs: string[]): string[] {
-  return inputs.map(sanitize).filter(Boolean).slice(0, 10);
+function sanitizeArray(inputs: unknown): string[] {
+  if (!Array.isArray(inputs)) return [];
+  return inputs
+    .filter((v): v is string => typeof v === "string")
+    .map(sanitize)
+    .filter((v) => v.length > 0)
+    .slice(0, 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -453,78 +464,168 @@ function buildUserPrompt(params: BranchParams): string {
 
 function buildFallbackTitles(params: BranchParams): SearchTitle[] {
   const titles: SearchTitle[] = [];
+  const seen = new Set<string>();
+  const push = (fr: string | null, en: string | null) => {
+    const frNorm = fr ? fr.trim() : null;
+    const enNorm = en ? en.trim() : null;
+    if (!frNorm && !enNorm) return;
+    const key = `${(frNorm ?? "").toLowerCase()}|${(enNorm ?? "").toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    titles.push({ fr: frNorm, en: enNorm });
+  };
+
+  const addWithVariants = (base: string) => {
+    const b = sanitize(base);
+    if (!b) return;
+    push(b, null);
+    const lower = b.toLowerCase();
+    const already = ["senior", "junior", "confirme", "débutant", "debutant"].some((k) =>
+      lower.includes(k),
+    );
+    if (already) {
+      push(`${b} confirmé`, null);
+      push(b, b);
+    } else {
+      push(`${b} senior`, null);
+      push(`${b} confirmé`, null);
+      push(`${b} junior`, null);
+    }
+  };
 
   if ("current_job_title" in params && params.current_job_title) {
-    titles.push({ fr: params.current_job_title, en: null });
-    // Basic variants
-    const title = params.current_job_title;
-    if (!title.toLowerCase().includes("senior") && !title.toLowerCase().includes("junior")) {
-      titles.push({ fr: `${title} senior`, en: null });
-      titles.push({ fr: `${title} confirme`, en: null });
-    }
+    addWithVariants(params.current_job_title);
   }
 
-  if ("target_jobs" in params && params.target_jobs) {
+  if ("target_jobs" in params && Array.isArray(params.target_jobs)) {
     for (const job of params.target_jobs) {
-      titles.push({ fr: job, en: null });
+      addWithVariants(job);
     }
   }
 
-  if ("education_field" in params && params.education_field) {
-    titles.push({ fr: `${params.contract_type === "apprenticeship" ? "Alternant" : params.contract_type === "internship" ? "Stagiaire" : "Junior"} ${params.education_field}`, en: null });
+  if (params.branch === "5") {
+    const prefix =
+      params.contract_type === "apprenticeship"
+        ? "Alternant"
+        : params.contract_type === "internship"
+          ? "Stagiaire"
+          : "Junior";
+    const field = sanitize(params.education_field);
+    if (field) push(`${prefix} ${field}`, null);
   }
 
-  return titles.length > 0 ? titles : [{ fr: "Emploi", en: "Job" }];
+  if (titles.length === 0) {
+    push("Emploi", "Job");
+  }
+  return titles;
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  if (typeof err === "object" && err !== null) {
+    const maybeMsg = (err as { message?: unknown }).message;
+    if (typeof maybeMsg === "string") return maybeMsg;
+  }
+  return "Unknown error";
+}
+
+function isRetryableError(err: unknown): boolean {
+  if (err === null || err === undefined) return false;
+  const msg = errorMessage(err);
+  const statusMatch = /\b([45]\d\d)\b/.exec(msg);
+  const status = statusMatch ? Number(statusMatch[1]) : null;
+  if (status !== null) {
+    if (status === 429) return true;
+    if (status >= 500) return true;
+    return false;
+  }
+  if (err instanceof SyntaxError) return true;
+  const name = err instanceof Error ? err.name : undefined;
+  if (name === "AbortError") return true;
+  return true;
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 // ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
+function toNumber(v: unknown): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "bigint") return Number(v);
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
 export async function generateTitles(
   params: BranchParams,
   modelId?: string,
 ): Promise<TitleGenResult> {
-  const resolvedModel = modelId ?? DEFAULT_MODEL;
-  const config = MODEL_CONFIG[resolvedModel] ?? { label: resolvedModel, pricing: { input: 0.15, output: 0.60 } };
+  const resolvedModel: ModelId = isAvailableModel(modelId) ? modelId : DEFAULT_MODEL;
+  const config = MODEL_CONFIG[resolvedModel];
 
   const userPrompt = buildUserPrompt(params);
 
-  async function callLLM(): Promise<{ titles: SearchTitle[]; rawJson: unknown; durationMs: number; tokensIn: number; tokensOut: number }> {
+  async function callLLM() {
     const start = Date.now();
-    const result = await generateText({
-      model: google(resolvedModel),
-      system: SYSTEM_PROMPT,
-      prompt: userPrompt,
-      temperature: 0.3,
-      maxOutputTokens: 2000,
-      providerOptions: {
-        google: {
-          structuredOutputs: false,
-          responseMimeType: "application/json",
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+    try {
+      const result = await generateText({
+        model: google(resolvedModel),
+        system: SYSTEM_PROMPT,
+        prompt: userPrompt,
+        temperature: 0.3,
+        maxOutputTokens: 2000,
+        abortSignal: controller.signal,
+        providerOptions: {
+          google: {
+            structuredOutputs: false,
+            responseMimeType: "application/json",
+          },
         },
-      },
-    });
-    const durationMs = Date.now() - start;
+      });
+      const durationMs = Date.now() - start;
 
-    const cleaned = result.text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-    const rawJson = JSON.parse(cleaned);
-    const parsed = llmTitleOutputSchema.parse(rawJson);
+      const cleaned = result.text
+        .replace(/^\s*```(?:json)?\s*\n?/i, "")
+        .replace(/\n?```\s*$/i, "")
+        .trim();
+      if (!cleaned) {
+        throw new Error(`Empty response from model (finishReason: ${String(result.finishReason)})`);
+      }
+      if (cleaned.length > 200_000) {
+        throw new Error("Response too large");
+      }
+      const rawJson: unknown = JSON.parse(cleaned);
+      const parsed = llmTitleOutputSchema.parse(rawJson);
 
-    const usage = result.usage as Record<string, unknown> | undefined;
-    const tokensIn = (usage?.promptTokens ?? usage?.input_tokens ?? usage?.inputTokens ?? 0) as number;
-    const tokensOut = (usage?.completionTokens ?? usage?.output_tokens ?? usage?.outputTokens ?? 0) as number;
+      const usage = result.usage as Record<string, unknown> | undefined;
+      const tokensIn = toNumber(usage?.promptTokens ?? usage?.input_tokens ?? usage?.inputTokens);
+      const tokensOut = toNumber(usage?.completionTokens ?? usage?.output_tokens ?? usage?.outputTokens);
 
-    return { titles: parsed.titles, rawJson, durationMs, tokensIn, tokensOut };
+      return { titles: parsed.titles, rawJson, durationMs, tokensIn, tokensOut };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   let lastError: unknown;
+  const maxAttempts = 2;
 
-  // Try once, retry once on failure
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       const { titles, rawJson, durationMs, tokensIn, tokensOut } = await callLLM();
-      const costUsd = (tokensIn / 1_000_000) * config.pricing.input + (tokensOut / 1_000_000) * config.pricing.output;
+      const costUsd =
+        (tokensIn / 1_000_000) * config.pricing.input +
+        (tokensOut / 1_000_000) * config.pricing.output;
 
       return {
         titles,
@@ -535,16 +636,19 @@ export async function generateTitles(
           tokensIn,
           tokensOut,
           tokensTotal: tokensIn + tokensOut,
-          costUsd,
+          costUsd: Math.round(costUsd * 1_000_000) / 1_000_000,
           rawOutput: rawJson,
         },
       };
     } catch (err) {
       lastError = err;
+      if (attempt >= maxAttempts - 1) break;
+      if (!isRetryableError(err)) break;
+      const backoff = 300 + Math.floor(Math.random() * 400);
+      await sleep(backoff);
     }
   }
 
-  // Fallback after 2 failures
   const fallbackTitles = buildFallbackTitles(params);
   return {
     titles: fallbackTitles,
@@ -556,7 +660,7 @@ export async function generateTitles(
       tokensOut: 0,
       tokensTotal: 0,
       costUsd: 0,
-      rawOutput: { error: String(lastError), fallback: true },
+      rawOutput: { error: errorMessage(lastError), fallback: true },
     },
   };
 }

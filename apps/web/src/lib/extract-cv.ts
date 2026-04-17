@@ -2,54 +2,9 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod/v4";
 import { type ExtractedProfile } from "@jobfindeer/validators";
+import { MODEL_CONFIG, AVAILABLE_MODELS, isAvailableModel } from "./model-config";
 
-// Pricing per 1M tokens (USD)
-const MODEL_CONFIG: Record<string, { label: string; pricing: { input: number; output: number } }> = {
-  // Gemini 3.x
-  "gemini-3.1-pro-preview": {
-    label: "Gemini 3.1 Pro (preview)",
-    pricing: { input: 1.25, output: 10.00 },
-  },
-  "gemini-3.1-flash-lite-preview": {
-    label: "Gemini 3.1 Flash Lite (preview)",
-    pricing: { input: 0.075, output: 0.30 },
-  },
-  "gemini-3-pro-preview": {
-    label: "Gemini 3 Pro (preview)",
-    pricing: { input: 1.25, output: 10.00 },
-  },
-  "gemini-3-flash-preview": {
-    label: "Gemini 3 Flash (preview)",
-    pricing: { input: 0.15, output: 0.60 },
-  },
-  // Gemini 2.5
-  "gemini-2.5-pro": {
-    label: "Gemini 2.5 Pro",
-    pricing: { input: 1.25, output: 10.00 },
-  },
-  "gemini-2.5-flash": {
-    label: "Gemini 2.5 Flash",
-    pricing: { input: 0.15, output: 0.60 },
-  },
-  "gemini-2.5-flash-lite": {
-    label: "Gemini 2.5 Flash Lite",
-    pricing: { input: 0.075, output: 0.30 },
-  },
-  // Gemini 2.0
-  "gemini-2.0-flash": {
-    label: "Gemini 2.0 Flash",
-    pricing: { input: 0.10, output: 0.40 },
-  },
-  "gemini-2.0-flash-lite": {
-    label: "Gemini 2.0 Flash Lite",
-    pricing: { input: 0.075, output: 0.30 },
-  },
-};
-
-export const AVAILABLE_MODELS = Object.entries(MODEL_CONFIG).map(([id, cfg]) => ({
-  id,
-  label: cfg.label,
-}));
+export { AVAILABLE_MODELS };
 
 export interface ExtractionMetrics {
   model: string;
@@ -96,11 +51,12 @@ const llmOutputSchema = z.object({
 });
 
 export async function extractProfileFromCV(cvText: string, modelId = "gemini-2.5-flash"): Promise<ExtractionResult> {
-  const config = MODEL_CONFIG[modelId] ?? MODEL_CONFIG["gemini-2.5-flash"]!;
+  const resolvedModel = isAvailableModel(modelId) ? modelId : "gemini-2.5-flash";
+  const config = MODEL_CONFIG[resolvedModel];
   const startTime = Date.now();
 
   const result = await generateText({
-    model: google(modelId),
+    model: google(resolvedModel),
     providerOptions: {
       google: {
         structuredOutputs: false,
@@ -209,7 +165,7 @@ ${cvText}
   return {
     profile,
     metrics: {
-      model: modelId,
+      model: resolvedModel,
       modelLabel: config.label,
       durationMs,
       tokensIn,

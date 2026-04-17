@@ -2,7 +2,8 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod/v4";
 import type { ExtractedProfile } from "@jobfindeer/validators";
-import { MODEL_CONFIG } from "./model-config";
+import type { ModelId } from "./model-config";
+import { MODEL_CONFIG, isAvailableModel } from "./model-config";
 
 const BRANCHES = `
 Branche 1 — Même poste, en mieux : cherche un poste similaire mais avec de meilleures conditions (salaire, télétravail, management, environnement).
@@ -46,8 +47,8 @@ export async function analyzeIntent(
   profile: ExtractedProfile | null,
   modelId?: string,
 ): Promise<IntentAnalysisResult> {
-  const resolvedModel = modelId ?? "gemini-2.5-flash";
-  const config = MODEL_CONFIG[resolvedModel] ?? { label: resolvedModel, pricing: { input: 0.15, output: 0.60 } };
+  const resolvedModel: ModelId = isAvailableModel(modelId) ? modelId : "gemini-2.5-flash";
+  const config = MODEL_CONFIG[resolvedModel];
 
   const profileContext = profile
     ? `Résumé CV : ${profile.currentTitle ?? "inconnu"}, ${profile.experienceYears ?? "?"} ans d'expérience, compétences : ${[...profile.hardSkills, ...profile.softSkills].slice(0, 10).join(", ")}.`
@@ -80,7 +81,7 @@ Retourne un JSON avec :
   const durationMs = Date.now() - start;
 
   const cleaned = result.text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-  const rawJson = JSON.parse(cleaned);
+  const rawJson: unknown = JSON.parse(cleaned);
   const parsed = intentSchema.parse(rawJson);
 
   const usage = result.usage as Record<string, unknown> | undefined;

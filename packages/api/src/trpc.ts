@@ -5,6 +5,18 @@ import { z, ZodError } from "zod/v4";
 import { db } from "@jobfindeer/db/client";
 import { auth } from "@jobfindeer/auth";
 
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.DISABLE_BILLING === "true"
+) {
+  throw new Error(
+    "DISABLE_BILLING=true is forbidden in production. Remove the env var before deploying.",
+  );
+}
+const billingDisabled =
+  process.env.NODE_ENV !== "production" &&
+  process.env.DISABLE_BILLING === "true";
+
 /**
  * 1. CONTEXT
  *
@@ -71,7 +83,6 @@ export const protectedProcedure = t.procedure
     }
 
     // Admins bypass trial check
-    const billingDisabled = process.env.DISABLE_BILLING === "true";
     const { trialEndsAt, role } = ctx.session.user;
     const isAdmin = role === "admin";
     const trialActive = trialEndsAt && new Date(trialEndsAt) > new Date();

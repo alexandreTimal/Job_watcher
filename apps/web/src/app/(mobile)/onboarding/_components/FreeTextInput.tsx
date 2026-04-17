@@ -1,25 +1,18 @@
 "use client";
 
 import { useState } from "react";
-
-const INTENT_MODELS = [
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
-  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (preview)" },
-  { id: "gemini-3-pro-preview", label: "Gemini 3 Pro (preview)" },
-  { id: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite (preview)" },
-  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (preview)" },
-];
+import { Button } from "@jobfindeer/ui/button";
+import { AVAILABLE_MODELS } from "~/lib/model-config";
 
 interface FreeTextInputProps {
   onSubmit: (text: string, model: string) => void;
   loading?: boolean;
+  initialText?: string;
 }
 
-export function FreeTextInput({ onSubmit, loading }: FreeTextInputProps) {
-  const [text, setText] = useState("");
-  const [model, setModel] = useState("gemini-2.5-flash");
+export function FreeTextInput({ onSubmit, loading, initialText }: FreeTextInputProps) {
+  const [text, setText] = useState(initialText ?? "");
+  const [model, setModel] = useState<string>("gemini-2.5-flash");
   const charCount = text.length;
   const isValid = charCount >= 100 && charCount <= 500;
 
@@ -56,19 +49,20 @@ export function FreeTextInput({ onSubmit, loading }: FreeTextInputProps) {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             disabled={loading}
+            aria-label="Modèle LLM d'analyse"
             className="border-input bg-background rounded-md border px-2 py-1.5 text-xs"
           >
-            {INTENT_MODELS.map((m) => (
+            {AVAILABLE_MODELS.map((m) => (
               <option key={m.id} value={m.id}>{m.label}</option>
             ))}
           </select>
-          <button
+          <Button
+            type="button"
             onClick={() => onSubmit(text, model)}
             disabled={!isValid || loading}
-            className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {loading ? "Analyse en cours..." : "Analyser"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

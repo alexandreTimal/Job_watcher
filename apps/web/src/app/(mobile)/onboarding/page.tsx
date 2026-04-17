@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { ExtractedProfile } from "@jobfindeer/validators";
 import type { ExtractionMetrics } from "~/lib/extract-cv";
@@ -84,9 +84,14 @@ export default function OnboardingPage() {
   const [calibrationData, setCalibrationData] = useState<Record<string, unknown> | null>(null);
   const [showBranchSelect, setShowBranchSelect] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<SearchTitle[]>([]);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [generatingTitles, setGeneratingTitles] = useState(false);
   const [savingTitles, setSavingTitles] = useState(false);
+  const [titlesError, setTitlesError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [initialPrefs, setInitialPrefs] = useState<Partial<import("./_components/CommonQuestions").CommonPrefs> | null>(null);
+  const commonSubmittingRef = useRef(false);
+  const freeTextSubmittingRef = useRef(false);
   const router = useRouter();
   const trpc = useTRPC();
 
@@ -141,8 +146,26 @@ export default function OnboardingPage() {
       setCalibrationData(profile.calibrationAnswers as Record<string, unknown>);
     }
     if (profile.searchTitles) {
-      const st = profile.searchTitles as { titles: SearchTitle[] };
+      const st = profile.searchTitles as { titles: SearchTitle[]; generated_at?: string };
       setGeneratedTitles(st.titles ?? []);
+      if (st.generated_at) setGeneratedAt(st.generated_at);
+    }
+
+    if (preferences) {
+      const prefs = preferences as {
+        contractTypes?: string[] | null;
+        remotePreference?: string | null;
+        locations?: { label: string; radius: number | null }[] | null;
+      };
+      const locs = prefs.locations ?? [];
+      const isFrance = locs.length === 1 && locs[0]?.label === "France entiere";
+      const isRemoteOnly = prefs.remotePreference === "remote" && locs.length === 0;
+      setInitialPrefs({
+        locationMode: isFrance ? "france" : isRemoteOnly ? "remote_only" : "cities",
+        cities: isFrance ? [] : locs.map((l) => l.label),
+        remoteFriendly: prefs.remotePreference === "remote",
+        contractTypes: prefs.contractTypes ?? [],
+      });
     }
 
     // If branch exists but no intentResult, pre-set showBranchSelect for safe "intent" step rendering
@@ -177,6 +200,8 @@ export default function OnboardingPage() {
   }
 
   async function handleFreeTextSubmit(text: string, model: string) {
+    if (freeTextSubmittingRef.current) return;
+    freeTextSubmittingRef.current = true;
     setFreeText(text);
     setAnalyzing(true);
 
@@ -215,6 +240,7 @@ export default function OnboardingPage() {
       setStep("intent");
     } finally {
       setAnalyzing(false);
+      freeTextSubmittingRef.current = false;
     }
   }
 
@@ -226,7 +252,7 @@ export default function OnboardingPage() {
   function handleIntentCorrect(preselectedBranch: string) {
     setShowBranchSelect(true);
     setIntentResult((prev) =>
-      prev ? { ...prev, branch: preselectedBranch } : null,
+      prev ? { ...prev, branch: preselectedBranch as IntentResult["branch"] } : null,
     );
   }
 
@@ -256,6 +282,9 @@ export default function OnboardingPage() {
   }
 
   async function handleCommonComplete(prefs: CommonPrefs) {
+    if (commonSubmittingRef.current) return;
+    commonSubmittingRef.current = true;
+
     const remotePreference =
       prefs.locationMode === "remote_only" || prefs.remoteFriendly
         ? "remote"
@@ -266,29 +295,52 @@ export default function OnboardingPage() {
         ? [{ label: "France entiere", radius: null }]
         : prefs.cities.map((c) => ({ label: c, radius: 25 }));
 
-    await updatePreferences.mutateAsync({
-      contractTypes: prefs.contractTypes,
-      remotePreference,
-      locations,
-    });
-
-    // Generate titles via LLM
-    setGeneratingTitles(true);
     try {
-      const params = buildTitleGenParams(branch, extraction ?? {}, calibrationData as Record<string, unknown>);
+      await updatePreferences.mutateAsync({
+        contractTypes: prefs.contractTypes,
+        remotePreference,
+        locations,
+      });
+    } catch (err) {
+      commonSubmittingRef.current = false;
+      console.error("[ONBOARDING] updatePreferences failed:", err);
+      setTitlesError("Impossible d'enregistrer tes préférences. Réessaie.");
+      return;
+    }
+
+    setTitlesError(null);
+    setGeneratingTitles(true);
+    setStep("titles");
+    try {
+      const params = buildTitleGenParams(
+        branch,
+        extraction ?? {},
+        calibrationData as Record<string, unknown>,
+      );
+      const fetchedAt = new Date().toISOString();
       const res = await fetch("/api/generate-titles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ params }),
       });
-      const data = await res.json();
-      setGeneratedTitles(data.titles ?? []);
-    } catch {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { titles?: SearchTitle[] };
+      const titles = Array.isArray(data.titles) ? data.titles : [];
+      setGeneratedTitles(titles);
+      setGeneratedAt(fetchedAt);
+      if (titles.length === 0) {
+        setTitlesError("Le service n'a renvoyé aucun titre. Ajoute-les manuellement.");
+      }
+    } catch (err) {
+      console.error("[ONBOARDING] generate-titles failed:", err);
       setGeneratedTitles([]);
+      setTitlesError("La génération a échoué. Réessaie ou ajoute tes titres manuellement.");
     } finally {
       setGeneratingTitles(false);
+      commonSubmittingRef.current = false;
     }
-    setStep("titles");
   }
 
   async function handleTitlesComplete(validated: SearchTitleWithActive[]) {
@@ -296,11 +348,14 @@ export default function OnboardingPage() {
     setSavingTitles(true);
     try {
       await saveSearchTitles.mutateAsync({
-        generated_at: new Date().toISOString(),
+        generated_at: generatedAt ?? new Date().toISOString(),
         branch_used: branch as "1" | "2" | "3" | "4" | "5",
         titles: validated,
       });
       router.push("/feed");
+    } catch (err) {
+      console.error("[ONBOARDING] saveSearchTitles failed:", err);
+      setTitlesError("Impossible d'enregistrer tes titres. Réessaie.");
     } finally {
       setSavingTitles(false);
     }
@@ -383,7 +438,11 @@ export default function OnboardingPage() {
       )}
 
       {step === "freetext" && (
-        <FreeTextInput onSubmit={handleFreeTextSubmit} loading={analyzing} />
+        <FreeTextInput
+          onSubmit={handleFreeTextSubmit}
+          loading={analyzing}
+          initialText={freeText}
+        />
       )}
 
       {step === "intent" && (
@@ -420,6 +479,7 @@ export default function OnboardingPage() {
           onComplete={handleCommonComplete}
           loading={updatePreferences.isPending}
           calibrationContractType={calibrationData?.contractType as string | undefined}
+          initialPrefs={initialPrefs ?? undefined}
         />
       )}
 
@@ -433,22 +493,28 @@ export default function OnboardingPage() {
           ) : generatedTitles.length === 0 ? (
             <div className="space-y-4 py-8 text-center">
               <p className="text-muted-foreground text-sm">
-                La generation des titres a echoue. Tu peux reessayer ou ajouter tes titres manuellement.
+                {titlesError ?? "La génération des titres a échoué. Tu peux réessayer ou ajouter tes titres manuellement."}
               </p>
               <div className="flex justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
+                    setTitlesError(null);
                     setStep("common");
-                    // re-trigger will happen when handleCommonComplete runs again
                   }}
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-4 py-2 text-sm font-medium"
                 >
-                  Reessayer
+                  Réessayer
                 </button>
                 <button
                   type="button"
-                  onClick={() => setGeneratedTitles([{ fr: extraction?.currentTitle ?? "Mon poste", en: null }])}
+                  onClick={() => {
+                    setTitlesError(null);
+                    setGeneratedAt(new Date().toISOString());
+                    setGeneratedTitles([
+                      { fr: extraction?.currentTitle ?? "Mon poste", en: null },
+                    ]);
+                  }}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium"
                 >
                   Ajouter manuellement
@@ -456,12 +522,18 @@ export default function OnboardingPage() {
               </div>
             </div>
           ) : (
-            <TitleValidation
-              key={JSON.stringify(generatedTitles)}
-              titles={generatedTitles}
-              onComplete={handleTitlesComplete}
-              loading={savingTitles}
-            />
+            <>
+              {titlesError && (
+                <p className="mb-3 rounded border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+                  {titlesError}
+                </p>
+              )}
+              <TitleValidation
+                titles={generatedTitles}
+                onComplete={handleTitlesComplete}
+                loading={savingTitles}
+              />
+            </>
           )}
         </>
       )}

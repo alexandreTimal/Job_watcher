@@ -2,49 +2,44 @@ import { NextResponse } from "next/server";
 import { z } from "zod/v4";
 
 import { auth } from "@jobfindeer/auth";
-import { branchEnum } from "@jobfindeer/validators";
-import { generateTitles, type BranchParams } from "~/lib/title-generator";
+import type { BranchParams } from "~/lib/title-generator";
+import { generateTitles } from "~/lib/title-generator";
+import { AVAILABLE_MODEL_IDS } from "~/lib/model-config";
+import { rateLimit } from "~/lib/rate-limit";
 
 const branch1Input = z.object({
   branch: z.literal("1"),
-  current_job_title: z.string().min(1),
-  current_seniority_level: z.string().min(1),
+  current_job_title: z.string().min(1).max(200),
+  current_seniority_level: z.string().min(1).max(50),
 });
 
 const branch2Input = z.object({
   branch: z.literal("2"),
-  current_job_title: z.string().min(1),
-  current_seniority_level: z.string().min(1),
-  responsibility_jump_type: z.array(z.string()).min(1),
+  current_job_title: z.string().min(1).max(200),
+  current_seniority_level: z.string().min(1).max(50),
+  responsibility_jump_type: z.array(z.string().min(1).max(50)).min(1).max(10),
 });
 
 const branch3Input = z.object({
   branch: z.literal("3"),
-  current_job_title: z.string().min(1),
-  target_jobs: z.array(z.string()).min(1),
-  salary_drop_tolerance: z.string().min(1),
-  training_willingness: z.string().min(1),
+  current_job_title: z.string().min(1).max(200),
+  target_jobs: z.array(z.string().min(1).max(200)).min(1).max(10),
+  salary_drop_tolerance: z.string().min(1).max(50),
+  training_willingness: z.string().min(1).max(50),
 });
 
 const branch4Input = z.object({
   branch: z.literal("4"),
-  target_jobs: z.array(z.string()).min(1),
-  seniority_acceptance: z.string().min(1),
+  target_jobs: z.array(z.string().min(1).max(200)).min(1).max(10),
+  seniority_acceptance: z.string().min(1).max(50),
 });
 
 const branch5Input = z.object({
   branch: z.literal("5"),
-  education_level: z.string().min(1),
-  education_field: z.string().min(1),
-  contract_type: z.string().min(1),
+  education_level: z.string().min(1).max(100),
+  education_field: z.string().min(1).max(200),
+  contract_type: z.string().min(1).max(50),
 });
-
-const ALLOWED_MODELS = [
-  "gemini-2.5-flash-lite",
-  "gemini-2.0-flash-lite",
-  "gemini-2.0-flash",
-  "gemini-2.5-flash",
-] as const;
 
 const requestSchema = z.object({
   params: z.discriminatedUnion("branch", [
@@ -54,13 +49,24 @@ const requestSchema = z.object({
     branch4Input,
     branch5Input,
   ]),
-  model: z.enum(ALLOWED_MODELS).optional(),
+  model: z.enum(AVAILABLE_MODEL_IDS).optional(),
 });
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user.id) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+
+  const limit = rateLimit(`generate-titles:${session.user.id}`, {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Trop de requetes" },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } },
+    );
   }
 
   let body: unknown;
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Parametres invalides", details: parsed.error.issues },
+      { error: "Parametres invalides" },
       { status: 400 },
     );
   }
@@ -83,12 +89,14 @@ export async function POST(request: Request) {
       parsed.data.params as BranchParams,
       parsed.data.model,
     );
+    // generateTitles always returns {titles, metrics} even on LLM failure (internal fallback).
     return NextResponse.json(result);
   } catch (err) {
-    console.error("[GENERATE-TITLES] Generation failed:", err);
+    // Unexpected sync throw (e.g. invalid branch from an unsafe cast). Surface 500.
+    console.error("[GENERATE-TITLES] Unexpected error:", err);
     return NextResponse.json(
-      { error: "Generation echouee", fallback: true },
-      { status: 200 },
+      { error: "Erreur interne" },
+      { status: 500 },
     );
   }
 }

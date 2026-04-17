@@ -23,7 +23,6 @@
     "@jobfindeer/validators": "workspace:*",
     "@trpc/server": "catalog:",
     "drizzle-orm": "^0.44.7",
-    "next-auth": "5.0.0-beta.30",
     "superjson": "2.2.3",
     "zod": "catalog:"
   },

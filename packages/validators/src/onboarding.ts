@@ -40,6 +40,7 @@ export const branch3CalibrationSchema = z.object({
 export const branch4CalibrationSchema = z.object({
   maturity: z.enum(["precise", "few_ideas", "not_yet"]),
   acceptedLevel: z.enum(["junior", "intermediate", "both"]).optional(),
+  targetJobs: z.array(z.string().min(1)).optional(),
 });
 
 export const branch5CalibrationSchema = z.object({
@@ -56,27 +57,43 @@ export const calibrationByBranchSchemas = {
 } as const;
 
 // Search titles schemas
-export const searchTitleSchema = z.object({
-  fr: z.string().nullable(),
-  en: z.string().nullable(),
-});
+const nonBlankStringOrNull = z
+  .string()
+  .nullable()
+  .transform((v) => (v === null ? null : v.trim()))
+  .transform((v) => (v === null || v.length === 0 ? null : v));
+
+export const searchTitleSchema = z
+  .object({
+    fr: nonBlankStringOrNull,
+    en: nonBlankStringOrNull,
+  })
+  .refine((t) => t.fr !== null || t.en !== null, {
+    message: "Au moins un des champs fr ou en doit être non vide",
+  });
 
 export type SearchTitle = z.infer<typeof searchTitleSchema>;
 
-export const searchTitleWithActiveSchema = searchTitleSchema.extend({
-  active: z.boolean(),
-});
+export const searchTitleWithActiveSchema = z
+  .object({
+    fr: nonBlankStringOrNull,
+    en: nonBlankStringOrNull,
+    active: z.boolean(),
+  })
+  .refine((t) => t.fr !== null || t.en !== null, {
+    message: "Au moins un des champs fr ou en doit être non vide",
+  });
 
 export type SearchTitleWithActive = z.infer<typeof searchTitleWithActiveSchema>;
 
 export const searchTitlesDataSchema = z.object({
-  generated_at: z.string(),
+  generated_at: z.iso.datetime(),
   branch_used: branchEnum,
-  titles: z.array(searchTitleWithActiveSchema),
+  titles: z.array(searchTitleWithActiveSchema).min(1).max(50),
 });
 
 export type SearchTitlesData = z.infer<typeof searchTitlesDataSchema>;
 
 export const llmTitleOutputSchema = z.object({
-  titles: z.array(searchTitleSchema),
+  titles: z.array(searchTitleSchema).min(1).max(18),
 });

@@ -4,7 +4,9 @@ import { useState, useRef, useCallback } from "react";
 import { useTRPC } from "~/trpc/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Preferences, SearchTitle, SearchTitleWithActive } from "@jobfindeer/validators";
+import { toast } from "@jobfindeer/ui/toast";
 import { PreferencesEditor } from "./_components/PreferencesEditor";
+import { DeleteAccountSection } from "./_components/DeleteAccountSection";
 import { TitleValidation } from "../../(mobile)/onboarding/_components/TitleValidation";
 import { buildTitleGenParams } from "~/lib/title-params";
 
@@ -124,6 +126,9 @@ export default function SettingsPage() {
 
       {/* Pipeline Trigger Section */}
       <PipelineTrigger />
+
+      {/* Danger Zone */}
+      <DeleteAccountSection />
     </div>
   );
 }
@@ -138,6 +143,7 @@ function SearchTitlesSection({
   const trpc = useTRPC();
   const [regenerating, setRegenerating] = useState(false);
   const [newTitles, setNewTitles] = useState<SearchTitle[] | null>(null);
+  const [newGeneratedAt, setNewGeneratedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const saveMutation = useMutation(
@@ -156,26 +162,37 @@ function SearchTitlesSection({
     if (!profile?.branch) return;
     setRegenerating(true);
     setNewTitles(null);
+    setNewGeneratedAt(null);
     try {
+      const params = buildTitleGenParams(
+        String(profile.branch),
+        {
+          currentTitle: profile.currentTitle as string | null,
+          experienceYears: profile.experienceYears as number | null,
+          educationLevel: profile.educationLevel as string | null,
+        },
+        profile.calibrationAnswers as Record<string, unknown> | null,
+      );
+      const fetchedAt = new Date().toISOString();
       const res = await fetch("/api/generate-titles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          params: buildTitleGenParams(
-            String(profile?.branch),
-            {
-              currentTitle: profile?.currentTitle as string | null,
-              experienceYears: profile?.experienceYears as number | null,
-              educationLevel: profile?.educationLevel as string | null,
-            },
-            profile?.calibrationAnswers as Record<string, unknown> | null,
-          ),
-        }),
+        body: JSON.stringify({ params }),
       });
-      const data = await res.json();
-      setNewTitles(data.titles ?? []);
-    } catch {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { titles?: SearchTitle[] };
+      const titles = Array.isArray(data.titles) ? data.titles : [];
+      setNewTitles(titles);
+      setNewGeneratedAt(fetchedAt);
+      if (titles.length === 0) {
+        toast.warning("Aucun titre n'a été généré. Ajoute-les manuellement.");
+      }
+    } catch (err) {
+      console.error("[SETTINGS] regenerate failed:", err);
       setNewTitles([]);
+      toast.error("La génération des titres a échoué. Réessaie plus tard.");
     } finally {
       setRegenerating(false);
     }
@@ -186,12 +203,17 @@ function SearchTitlesSection({
     setSaving(true);
     try {
       await saveMutation.mutateAsync({
-        generated_at: new Date().toISOString(),
+        generated_at: newGeneratedAt ?? new Date().toISOString(),
         branch_used: profile.branch as "1" | "2" | "3" | "4" | "5",
         titles: validated,
       });
       setNewTitles(null);
+      setNewGeneratedAt(null);
       onSaved();
+      toast.success("Titres de recherche mis à jour.");
+    } catch (err) {
+      console.error("[SETTINGS] saveSearchTitles failed:", err);
+      toast.error("Impossible d'enregistrer tes titres. Réessaie.");
     } finally {
       setSaving(false);
     }

@@ -7,6 +7,7 @@ interface CommonQuestionsProps {
   onComplete: (prefs: CommonPrefs) => void;
   loading?: boolean;
   calibrationContractType?: string | null;
+  initialPrefs?: Partial<CommonPrefs>;
 }
 
 export interface CommonPrefs {
@@ -24,19 +25,26 @@ export function CommonQuestions({
   onComplete,
   loading,
   calibrationContractType,
+  initialPrefs,
 }: CommonQuestionsProps) {
-  const [locationMode, setLocationMode] = useState<CommonPrefs["locationMode"]>("cities");
+  const [locationMode, setLocationMode] = useState<CommonPrefs["locationMode"]>(
+    initialPrefs?.locationMode ?? "cities",
+  );
   const [cityInput, setCityInput] = useState("");
-  const [cities, setCities] = useState<string[]>([]);
-  const [remoteFriendly, setRemoteFriendly] = useState(false);
+  const [cities, setCities] = useState<string[]>(initialPrefs?.cities ?? []);
+  const [remoteFriendly, setRemoteFriendly] = useState(
+    initialPrefs?.remoteFriendly ?? false,
+  );
 
   const defaultContract = branch === "5"
     ? calibrationContractType === "stage" ? "Stage" : "Alternance"
     : null;
   const [contractTypes, setContractTypes] = useState<string[]>(
-    defaultContract ? [defaultContract] : [],
+    initialPrefs?.contractTypes ?? (defaultContract ? [defaultContract] : []),
   );
-  const [workSchedule, setWorkSchedule] = useState<CommonPrefs["workSchedule"]>("full_time");
+  const [workSchedule, setWorkSchedule] = useState<CommonPrefs["workSchedule"]>(
+    initialPrefs?.workSchedule ?? "full_time",
+  );
 
   function addCity() {
     const city = cityInput.trim();

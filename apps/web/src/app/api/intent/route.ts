@@ -3,10 +3,12 @@ import { z } from "zod/v4";
 
 import { auth } from "@jobfindeer/auth";
 import { analyzeIntent } from "~/lib/intent-analyzer";
+import { AVAILABLE_MODEL_IDS } from "~/lib/model-config";
+import { rateLimit } from "~/lib/rate-limit";
 
 const requestSchema = z.object({
   freeText: z.string().min(100).max(500),
-  model: z.string().optional(),
+  model: z.enum(AVAILABLE_MODEL_IDS).optional(),
   profile: z
     .object({
       currentTitle: z.string().nullable(),
@@ -19,8 +21,19 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  const limit = rateLimit(`intent:${session.user.id}`, {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Trop de requêtes" },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } },
+    );
   }
 
   let body: unknown;
@@ -48,8 +61,8 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[INTENT] Analysis failed:", err);
     return NextResponse.json(
-      { error: "Analyse échouée", fallback: true },
-      { status: 200 },
+      { error: "Analyse échouée" },
+      { status: 500 },
     );
   }
 }

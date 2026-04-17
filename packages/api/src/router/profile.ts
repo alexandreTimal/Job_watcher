@@ -128,26 +128,41 @@ export const profileRouter = {
   saveSearchTitles: protectedProcedure
     .input(searchTitlesDataSchema)
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db
-        .select({ id: userProfiles.id })
+      const [existing] = await ctx.db
+        .select({ branch: userProfiles.branch })
         .from(userProfiles)
         .where(eq(userProfiles.userId, ctx.session.user.id))
         .limit(1);
 
-      if (existing.length === 0) {
+      if (!existing) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Profil introuvable. Completez d'abord l'onboarding.",
         });
       }
 
-      await ctx.db
+      if (existing.branch && existing.branch !== input.branch_used) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "La branche des titres ne correspond pas au profil courant.",
+        });
+      }
+
+      const result = await ctx.db
         .update(userProfiles)
         .set({
           searchTitles: input,
           updatedAt: new Date(),
         })
-        .where(eq(userProfiles.userId, ctx.session.user.id));
+        .where(eq(userProfiles.userId, ctx.session.user.id))
+        .returning({ id: userProfiles.id });
+
+      if (result.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Profil introuvable.",
+        });
+      }
 
       return { success: true };
     }),
