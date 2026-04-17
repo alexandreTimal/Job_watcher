@@ -478,7 +478,7 @@ export default function OnboardingPage() {
           branch={branch}
           onComplete={handleCommonComplete}
           loading={updatePreferences.isPending}
-          calibrationContractType={calibrationData?.contractType as string | undefined}
+          calibrationContractTypes={calibrationData?.contractTypes as string[] | undefined}
           initialPrefs={initialPrefs ?? undefined}
         />
       )}

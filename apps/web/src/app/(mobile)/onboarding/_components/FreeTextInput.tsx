@@ -14,7 +14,7 @@ export function FreeTextInput({ onSubmit, loading, initialText }: FreeTextInputP
   const [text, setText] = useState(initialText ?? "");
   const [model, setModel] = useState<string>("gemini-2.5-flash");
   const charCount = text.length;
-  const isValid = charCount >= 100 && charCount <= 500;
+  const isValid = charCount >= 100 && charCount <= 5000;
 
   return (
     <div className="space-y-4">
@@ -29,7 +29,7 @@ export function FreeTextInput({ onSubmit, loading, initialText }: FreeTextInputP
         onChange={(e) => setText(e.target.value)}
         placeholder="Ex: Je suis développeur full-stack depuis 5 ans dans une startup. Je cherche un CDI avec plus de télétravail et un meilleur salaire, idéalement dans une boîte plus structurée..."
         className="border-input bg-background min-h-[150px] w-full resize-y rounded-md border p-3 text-sm"
-        maxLength={500}
+        maxLength={5000}
       />
 
       <div className="flex items-center justify-between text-xs">
@@ -37,12 +37,12 @@ export function FreeTextInput({ onSubmit, loading, initialText }: FreeTextInputP
           className={
             charCount < 100
               ? "text-muted-foreground"
-              : charCount <= 500
+              : charCount <= 5000
                 ? "text-green-600"
                 : "text-destructive"
           }
         >
-          {charCount}/500 caractères {charCount < 100 && `(min. 100)`}
+          {charCount}/5000 caractères {charCount < 100 && `(min. 100)`}
         </span>
         <div className="flex items-center gap-2">
           <select

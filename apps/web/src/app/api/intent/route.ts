@@ -7,7 +7,7 @@ import { AVAILABLE_MODEL_IDS } from "~/lib/model-config";
 import { rateLimit } from "~/lib/rate-limit";
 
 const requestSchema = z.object({
-  freeText: z.string().min(100).max(500),
+  freeText: z.string().min(100).max(5000),
   model: z.enum(AVAILABLE_MODEL_IDS).optional(),
   profile: z
     .object({
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Texte requis (100-500 caractères)" },
+      { error: "Texte requis (100-5000 caractères)" },
       { status: 400 },
     );
   }

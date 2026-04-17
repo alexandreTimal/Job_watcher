@@ -106,11 +106,16 @@ export function buildTitleGenParams(
       const studyField = typeof cal.studyField === "string" && cal.studyField.trim().length > 0
         ? cal.studyField.trim()
         : "Formation generale";
+      const rawTypes = Array.isArray(cal.contractTypes) ? cal.contractTypes : [];
+      const mapped = rawTypes
+        .map((ct) => contractMap[String(ct)])
+        .filter((v): v is string => typeof v === "string");
+      const contract_types = mapped.length > 0 ? Array.from(new Set(mapped)) : ["first_job"];
       return {
         branch: "5",
         education_level: (profile.educationLevel ?? "").trim() || "Bac+3",
         education_field: studyField,
-        contract_type: contractMap[String(cal.contractType)] ?? "first_job",
+        contract_types,
       };
     }
   }

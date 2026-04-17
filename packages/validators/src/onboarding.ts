@@ -4,7 +4,7 @@ export const branchEnum = z.enum(["1", "2", "3", "4", "5"]);
 export type Branch = z.infer<typeof branchEnum>;
 
 export const freeTextSchema = z.object({
-  text: z.string().min(100).max(500),
+  text: z.string().min(100).max(5000),
 });
 
 export const intentAnalysisOutputSchema = z.object({
@@ -44,7 +44,7 @@ export const branch4CalibrationSchema = z.object({
 });
 
 export const branch5CalibrationSchema = z.object({
-  contractType: z.enum(["alternance", "stage", "first_job"]),
+  contractTypes: z.array(z.enum(["alternance", "stage", "first_job"])).min(1),
   studyField: z.string().min(1),
 });
 

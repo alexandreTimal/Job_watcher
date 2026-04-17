@@ -396,16 +396,22 @@ function Branch4Form({ onComplete, loading }: { onComplete: (a: Record<string, u
 
 // --- Branch 5: Alternance/Stage ---
 function Branch5Form({ onComplete, loading, studyFieldHint }: { onComplete: (a: Record<string, unknown>) => void; loading?: boolean; studyFieldHint?: string | null }) {
-  const [contractType, setContractType] = useState("alternance");
+  const [contractTypes, setContractTypes] = useState<string[]>(["alternance"]);
   const [studyField, setStudyField] = useState(studyFieldHint ?? "");
+
+  function toggle(value: string) {
+    setContractTypes((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div>
         <label className="mb-2 block text-sm font-medium">
-          Type de contrat recherché
+          Type(s) de contrat recherché(s)
         </label>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {[
             { value: "alternance", label: "Alternance" },
             { value: "stage", label: "Stage" },
@@ -413,11 +419,10 @@ function Branch5Form({ onComplete, loading, studyFieldHint }: { onComplete: (a: 
           ].map((opt) => (
             <label key={opt.value} className="flex items-center gap-2 text-sm">
               <input
-                type="radio"
-                name="contractType"
+                type="checkbox"
                 value={opt.value}
-                checked={contractType === opt.value}
-                onChange={(e) => setContractType(e.target.value)}
+                checked={contractTypes.includes(opt.value)}
+                onChange={() => toggle(opt.value)}
               />
               {opt.label}
             </label>
@@ -439,9 +444,9 @@ function Branch5Form({ onComplete, loading, studyFieldHint }: { onComplete: (a: 
       </div>
 
       <SubmitButton
-        disabled={!studyField.trim() || loading}
+        disabled={!studyField.trim() || contractTypes.length === 0 || loading}
         loading={loading}
-        onClick={() => onComplete({ contractType, studyField })}
+        onClick={() => onComplete({ contractTypes, studyField })}
       />
     </div>
   );

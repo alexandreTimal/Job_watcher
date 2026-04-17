@@ -33,7 +33,7 @@ export type BranchParams =
   | { branch: "2"; current_job_title: string; current_seniority_level: string; responsibility_jump_type: string[] }
   | { branch: "3"; current_job_title: string; target_jobs: string[]; salary_drop_tolerance: string; training_willingness: string }
   | { branch: "4"; target_jobs: string[]; seniority_acceptance: string }
-  | { branch: "5"; education_level: string; education_field: string; contract_type: string };
+  | { branch: "5"; education_level: string; education_field: string; contract_types: string[] };
 
 // ---------------------------------------------------------------------------
 // System prompt (shared across all branches)
@@ -383,17 +383,18 @@ Generate job title variants for a STUDENT or RECENT GRADUATE looking for an appr
 
 - Education level: <user_input>${sanitize(p.education_level)}</user_input>
 - Education field: <user_input>${sanitize(p.education_field)}</user_input>
-- Contract type: ${sanitize(p.contract_type)}
+- Contract types: ${p.contract_types.map((c) => sanitize(c)).join(", ")}
 
-The "contract type" can be:
+Each "contract type" can be:
 - "apprenticeship" -> alternance contract
 - "internship" -> stage
 - "first_job" -> first permanent job / CDI debutant
 
 ## Instructions specific to this case
 
+- The candidate may be targeting MULTIPLE contract types simultaneously. Produce a balanced mix of titles covering every selected contract type.
 - Generate titles for ENTRY-LEVEL positions typical for a student/graduate of this level and field.
-- Adapt the title vocabulary to the contract type:
+- Adapt the title vocabulary to each contract type:
   * For "apprenticeship": include "en alternance", "apprenti", "alternant" when natural.
   * For "internship": include "stagiaire", "stage", "en stage" when natural.
   * For "first_job": use clean entry-level titles without stage/alternance mentions. Include "junior" or "debutant" when appropriate.
@@ -504,14 +505,18 @@ function buildFallbackTitles(params: BranchParams): SearchTitle[] {
   }
 
   if (params.branch === "5") {
-    const prefix =
-      params.contract_type === "apprenticeship"
-        ? "Alternant"
-        : params.contract_type === "internship"
-          ? "Stagiaire"
-          : "Junior";
     const field = sanitize(params.education_field);
-    if (field) push(`${prefix} ${field}`, null);
+    if (field) {
+      for (const ct of params.contract_types) {
+        const prefix =
+          ct === "apprenticeship"
+            ? "Alternant"
+            : ct === "internship"
+              ? "Stagiaire"
+              : "Junior";
+        push(`${prefix} ${field}`, null);
+      }
+    }
   }
 
   if (titles.length === 0) {

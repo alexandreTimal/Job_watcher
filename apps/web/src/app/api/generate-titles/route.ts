@@ -38,7 +38,7 @@ const branch5Input = z.object({
   branch: z.literal("5"),
   education_level: z.string().min(1).max(100),
   education_field: z.string().min(1).max(200),
-  contract_type: z.string().min(1).max(50),
+  contract_types: z.array(z.string().min(1).max(50)).min(1).max(3),
 });
 
 const requestSchema = z.object({
