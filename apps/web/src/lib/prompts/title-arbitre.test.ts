@@ -64,7 +64,7 @@ describe("buildArbitrePrompt", () => {
     const sanitize = (v: unknown) =>
       typeof v === "string" ? v.replace(/<\s*\/?\s*user_input\s*>/gi, "") : "";
     const out = buildArbitrePrompt(attack, { s: sanitize, sArr });
-    expect(out).not.toMatch(/malicious<\/user_input>/);
+    expect(out).not.toMatch(/<\/user_input>malicious/);
   });
 
   it("inclut la branche d'intention", () => {

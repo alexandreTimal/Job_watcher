@@ -15,3 +15,10 @@ export {
   buildTitleGenUserPrompt,
   type BranchParams,
 } from "./title-generation";
+export {
+  TITLE_ARBITRE_SYSTEM_PROMPT,
+  buildArbitrePrompt,
+  type ArbitrePromptInput,
+  type CvProfileForArbitre,
+  type UserExpectations,
+} from "./title-arbitre";
