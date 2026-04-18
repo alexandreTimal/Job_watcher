@@ -66,7 +66,14 @@ export function TitleValidation({ titles, onComplete, loading }: TitleValidation
     }
     setItems((prev) => [
       ...prev,
-      { fr: trimmed, en: null, active: true, _id: genId() },
+      {
+        fr: trimmed,
+        en: null,
+        niveau_ordinal: "aligné",
+        category: "classic_fr",
+        active: true,
+        _id: genId(),
+      },
     ]);
     setNewTitle("");
     setDupWarning(null);

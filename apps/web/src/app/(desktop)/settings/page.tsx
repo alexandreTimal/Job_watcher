@@ -173,11 +173,29 @@ function SearchTitlesSection({
         },
         profile.calibrationAnswers as Record<string, unknown> | null,
       );
+      const rawExtraction = profile.rawExtraction as
+        | {
+            workHistory?: { title?: string; start?: string | null; end?: string | null }[];
+          }
+        | null
+        | undefined;
+      const cv_profile = {
+        current_title: (profile.currentTitle as string | null) ?? null,
+        experience_years: (profile.experienceYears as number | null) ?? 0,
+        education_level: (profile.educationLevel as string | null) ?? null,
+        work_history: (rawExtraction?.workHistory ?? [])
+          .slice(0, 20)
+          .map((w) => ({
+            title: (w.title ?? "").slice(0, 200),
+            start: (w.start ?? "").slice(0, 20),
+            end: (w.end ?? "").slice(0, 20),
+          })),
+      };
       const fetchedAt = new Date().toISOString();
       const res = await fetch("/api/generate-titles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ params }),
+        body: JSON.stringify({ params, cv_profile }),
       });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
