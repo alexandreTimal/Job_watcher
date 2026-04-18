@@ -19,6 +19,7 @@ import { CommonQuestions, type CommonPrefs } from "./_components/CommonQuestions
 import { TitleValidation } from "./_components/TitleValidation";
 import { StepNavigation } from "./_components/StepNavigation";
 import { buildTitleGenParams } from "~/lib/title-params";
+import { hydrateLegacySearchTitles } from "~/lib/hydrate-search-titles";
 import type { SearchTitle, SearchTitleWithActive } from "@jobfindeer/validators";
 
 const STEPS = [
@@ -146,11 +147,8 @@ export default function OnboardingPage() {
       setCalibrationData(profile.calibrationAnswers as Record<string, unknown>);
     }
     if (profile.searchTitles) {
-      const st = profile.searchTitles as unknown as {
-        titles: SearchTitle[];
-        generated_at?: string;
-      };
-      setGeneratedTitles(st.titles ?? []);
+      const st = profile.searchTitles as { titles?: unknown; generated_at?: string };
+      setGeneratedTitles(hydrateLegacySearchTitles(st.titles));
       if (st.generated_at) setGeneratedAt(st.generated_at);
     }
 

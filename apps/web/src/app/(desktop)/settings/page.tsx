@@ -9,6 +9,7 @@ import { PreferencesEditor } from "./_components/PreferencesEditor";
 import { DeleteAccountSection } from "./_components/DeleteAccountSection";
 import { TitleValidation } from "../../(mobile)/onboarding/_components/TitleValidation";
 import { buildTitleGenParams } from "~/lib/title-params";
+import { hydrateLegacySearchTitlesWithActive } from "~/lib/hydrate-search-titles";
 
 export default function SettingsPage() {
   const trpc = useTRPC();
@@ -150,13 +151,23 @@ function SearchTitlesSection({
     trpc.profile.saveSearchTitles.mutationOptions(),
   );
 
-  const searchTitles = profile?.searchTitles as {
-    generated_at: string;
-    branch_used: string;
-    titles: SearchTitleWithActive[];
-  } | null;
+  const searchTitlesRaw = profile?.searchTitles as
+    | { generated_at?: string; branch_used?: string; titles?: unknown }
+    | null
+    | undefined;
 
-  const activeTitles = searchTitles?.titles.filter((t) => t.active) ?? [];
+  const hydratedTitles = hydrateLegacySearchTitlesWithActive(
+    searchTitlesRaw?.titles,
+  );
+  const searchTitles = searchTitlesRaw
+    ? {
+        generated_at: searchTitlesRaw.generated_at ?? "",
+        branch_used: searchTitlesRaw.branch_used ?? "",
+        titles: hydratedTitles,
+      }
+    : null;
+
+  const activeTitles = hydratedTitles.filter((t) => t.active);
 
   async function handleRegenerate() {
     if (!profile?.branch) return;

@@ -103,13 +103,28 @@ Imagine you are a French recruiter who has seen thousands of job ads. Every titl
  */
 type Sanitized<T> = T; // alias documentaire
 
+/**
+ * Strip control chars + balises `<user_input>` du texte LLM avant ré-injection
+ * dans un second prompt. Si l'Arbitre est jailbreaké, ça l'empêche d'injecter
+ * des instructions structurées dans le Generator.
+ */
+function sanitizeArbitreText(s: string): string {
+  return (
+    s
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+      .replace(/<\s*\/?\s*user_input\s*>/gi, "")
+      .slice(0, 500)
+  );
+}
+
 /** Bloc Arbitre injecté dans chaque builder juste avant `## Your turn`. */
 function arbitreBlock(arbitre: ArbitreOutput): string {
   return `## Arbitre de réalité (niveau calibré)
 
 - niveau_cible_effectif : ${arbitre.niveau_cible_effectif}
 - gap_detected : ${arbitre.gap_detected}
-- Analyse : ${arbitre.analyse_realite}
+- Analyse : ${sanitizeArbitreText(arbitre.analyse_realite)}
 
 Calibre les titres "aligné" sur ce niveau cible, PAS sur les attentes brutes de l'utilisateur.`;
 }

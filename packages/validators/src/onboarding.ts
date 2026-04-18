@@ -105,16 +105,23 @@ export const searchTitleWithActiveSchema = z
 
 export type SearchTitleWithActive = z.infer<typeof searchTitleWithActiveSchema>;
 
+/**
+ * Cap commun aux titres générés/persistés.
+ * Doit rester >= au cap LLM (`llmTitleOutputSchema`) ; bumper les deux ensemble
+ * si le Generator augmente sa borne.
+ */
+export const TITLES_MAX = 30;
+
 export const searchTitlesDataSchema = z.object({
   generated_at: z.iso.datetime(),
   branch_used: branchEnum,
-  titles: z.array(searchTitleWithActiveSchema).min(1).max(50),
+  titles: z.array(searchTitleWithActiveSchema).min(1).max(TITLES_MAX),
 });
 
 export type SearchTitlesData = z.infer<typeof searchTitlesDataSchema>;
 
 export const llmTitleOutputSchema = z.object({
-  titles: z.array(searchTitleSchema).min(1).max(30),
+  titles: z.array(searchTitleSchema).min(1).max(TITLES_MAX),
 });
 
 // ---------------------------------------------------------------------------

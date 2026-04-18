@@ -367,7 +367,11 @@ async function runGenerator(
 function buildFallbackTitles(params: BranchParams): SearchTitle[] {
   const titles: SearchTitle[] = [];
   const seen = new Set<string>();
-  const push = (fr: string | null, en: string | null) => {
+  const push = (
+    fr: string | null,
+    en: string | null,
+    niveau_ordinal: SearchTitle["niveau_ordinal"] = "aligné",
+  ) => {
     const frNorm = fr ? fr.trim() : null;
     const enNorm = en ? en.trim() : null;
     if (!frNorm && !enNorm) return;
@@ -377,7 +381,7 @@ function buildFallbackTitles(params: BranchParams): SearchTitle[] {
     titles.push({
       fr: frNorm,
       en: enNorm,
-      niveau_ordinal: "aligné",
+      niveau_ordinal,
       category: "classic_fr",
     });
   };
@@ -394,9 +398,9 @@ function buildFallbackTitles(params: BranchParams): SearchTitle[] {
       push(`${b} confirmé`, null);
       push(b, b);
     } else {
-      push(`${b} senior`, null);
+      push(`${b} senior`, null, "évolution_modérée");
       push(`${b} confirmé`, null);
-      push(`${b} junior`, null);
+      push(`${b} junior`, null, "sous-qualifié");
     }
   };
 
