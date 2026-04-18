@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { ArbitreOutput } from "@jobfindeer/validators";
 import {
@@ -72,5 +74,21 @@ describe("buildTitleGenUserPrompt (V1 refactor, accepte arbitre)", () => {
       sArr,
     });
     expect(out).not.toMatch(/<\/user_input>injected/);
+  });
+});
+
+describe("few-shot examples contain niveau_ordinal and category", () => {
+  const file = readFileSync(
+    fileURLToPath(new URL("./title-generation.ts", import.meta.url)),
+    "utf-8",
+  );
+
+  it("chaque exemple JSON inclut niveau_ordinal et category", () => {
+    const exampleBlocks = file.match(/\{\s*"fr":[^}]*\}/g) ?? [];
+    expect(exampleBlocks.length).toBeGreaterThan(20);
+    for (const block of exampleBlocks) {
+      expect(block).toMatch(/niveau_ordinal/);
+      expect(block).toMatch(/category/);
+    }
   });
 });

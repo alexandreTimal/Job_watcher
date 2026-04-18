@@ -143,16 +143,16 @@ Input: current_job_title="Developpeur fullstack", current_seniority_level="senio
 Expected output:
 {
   "titles": [
-    { "fr": "Developpeur fullstack senior", "en": "Senior Fullstack Developer" },
-    { "fr": "Developpeur full-stack", "en": "Fullstack Engineer" },
-    { "fr": "Ingenieur logiciel", "en": "Senior Software Engineer" },
-    { "fr": "Developpeur web senior", "en": "Senior Web Developer" },
-    { "fr": null, "en": "Senior Software Developer" },
-    { "fr": "Developpeur back-end et front-end", "en": "Full Stack Developer" },
-    { "fr": "Developpeur applicatif senior", "en": null },
-    { "fr": "Ingenieur developpement logiciel", "en": "Software Development Engineer" },
-    { "fr": null, "en": "Senior Web Engineer" },
-    { "fr": "Developpeur confirme", "en": null }
+    { "fr": "Developpeur fullstack senior", "en": "Senior Fullstack Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur full-stack", "en": "Fullstack Engineer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Ingenieur logiciel", "en": "Senior Software Engineer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur web senior", "en": "Senior Web Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": null, "en": "Senior Software Developer", "niveau_ordinal": "aligné", "category": "anglo_startup" },
+    { "fr": "Developpeur back-end et front-end", "en": "Full Stack Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": null, "en": "React Senior Developer", "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Ingenieur developpement logiciel", "en": "Software Development Engineer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": null, "en": "Node.js Senior Engineer", "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Developpeur confirme", "en": null, "niveau_ordinal": "sous-qualifié", "category": "classic_fr" }
   ]
 }
 
@@ -162,16 +162,16 @@ Input: current_job_title="Serveur en restaurant", current_seniority_level="2 yea
 Expected output:
 {
   "titles": [
-    { "fr": "Serveur", "en": null },
-    { "fr": "Serveuse", "en": null },
-    { "fr": "Serveur de restaurant", "en": null },
-    { "fr": "Serveur confirme", "en": null },
-    { "fr": "Serveur en salle", "en": null },
-    { "fr": "Employe polyvalent de restauration", "en": null },
-    { "fr": "Commis de salle", "en": null },
-    { "fr": "Runner", "en": "Food Runner" },
-    { "fr": "Serveur brasserie", "en": null },
-    { "fr": "Serveur restaurant traditionnel", "en": null }
+    { "fr": "Serveur", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Serveuse", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Serveur de restaurant", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Serveur confirme", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Serveur en salle", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Employe polyvalent de restauration", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Commis de salle", "en": null, "niveau_ordinal": "sous-qualifié", "category": "classic_fr" },
+    { "fr": "Runner", "en": "Food Runner", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Serveur brasserie", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Serveur restaurant traditionnel", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
@@ -222,16 +222,16 @@ Input: current_job_title="Developpeur senior", current_seniority_level="senior",
 Expected output:
 {
   "titles": [
-    { "fr": "Tech Lead", "en": "Tech Lead" },
-    { "fr": "Chef d'equipe developpement", "en": "Team Lead" },
-    { "fr": "Lead developpeur", "en": "Lead Developer" },
-    { "fr": "Responsable technique", "en": "Engineering Manager" },
-    { "fr": "Chef de projet technique", "en": "Technical Team Lead" },
-    { "fr": "Responsable d'equipe developpement", "en": "Development Team Lead" },
-    { "fr": null, "en": "Lead Software Engineer" },
-    { "fr": "Manager developpement", "en": "Software Engineering Manager" },
-    { "fr": "Responsable pole developpement", "en": null },
-    { "fr": null, "en": "Engineering Team Lead" }
+    { "fr": "Tech Lead", "en": "Tech Lead", "niveau_ordinal": "évolution_modérée", "category": "anglo_startup" },
+    { "fr": "Chef d'equipe developpement", "en": "Team Lead", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Lead developpeur", "en": "Lead Developer", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Responsable technique", "en": "Engineering Manager", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Chef de projet technique", "en": "Technical Team Lead", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Responsable d'equipe developpement", "en": "Development Team Lead", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": null, "en": "Lead Software Engineer", "niveau_ordinal": "évolution_modérée", "category": "anglo_startup" },
+    { "fr": "Manager developpement", "en": "Software Engineering Manager", "niveau_ordinal": "stretch_ambitieux", "category": "anglo_startup" },
+    { "fr": null, "en": "React Tech Lead", "niveau_ordinal": "évolution_modérée", "category": "hard_skill" },
+    { "fr": null, "en": "Engineering Team Lead", "niveau_ordinal": "évolution_modérée", "category": "anglo_startup" }
   ]
 }
 
@@ -241,16 +241,16 @@ Input: current_job_title="Commercial B2B", current_seniority_level="confirme", r
 Expected output:
 {
   "titles": [
-    { "fr": "Responsable grands comptes", "en": "Key Account Manager" },
-    { "fr": "Charge de grands comptes", "en": "Strategic Account Manager" },
-    { "fr": "Business Developer senior", "en": "Senior Business Developer" },
-    { "fr": "Responsable developpement commercial", "en": "Business Development Manager" },
-    { "fr": "Account Executive senior", "en": "Senior Account Executive" },
-    { "fr": "Responsable comptes strategiques", "en": "Strategic Account Executive" },
-    { "fr": "Charge d'affaires senior", "en": null },
-    { "fr": "Ingenieur commercial grands comptes", "en": "Enterprise Sales Manager" },
-    { "fr": null, "en": "Senior Account Manager" },
-    { "fr": "Chef de secteur grands comptes", "en": null }
+    { "fr": "Responsable grands comptes", "en": "Key Account Manager", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Charge de grands comptes", "en": "Strategic Account Manager", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Business Developer senior", "en": "Senior Business Developer", "niveau_ordinal": "évolution_modérée", "category": "anglo_startup" },
+    { "fr": "Responsable developpement commercial", "en": "Business Development Manager", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Account Executive senior", "en": "Senior Account Executive", "niveau_ordinal": "évolution_modérée", "category": "anglo_startup" },
+    { "fr": "Responsable comptes strategiques", "en": "Strategic Account Executive", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Charge d'affaires senior", "en": null, "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Ingenieur commercial grands comptes", "en": "Enterprise Sales Manager", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": null, "en": "Salesforce Account Executive", "niveau_ordinal": "évolution_modérée", "category": "hard_skill" },
+    { "fr": "Chef de secteur grands comptes", "en": null, "niveau_ordinal": "évolution_modérée", "category": "classic_fr" }
   ]
 }
 
@@ -305,16 +305,16 @@ Input: current_job_title="Developpeur senior", target_jobs=["Product Manager"], 
 Expected output:
 {
   "titles": [
-    { "fr": "Product Manager", "en": "Product Manager" },
-    { "fr": "Product Owner", "en": "Product Owner" },
-    { "fr": "Chef de produit", "en": "Product Manager" },
-    { "fr": "Technical Product Manager", "en": "Technical Product Manager" },
-    { "fr": "Product Manager junior", "en": "Junior Product Manager" },
-    { "fr": "Associate Product Manager", "en": "Associate Product Manager" },
-    { "fr": "Chef de produit digital", "en": "Digital Product Manager" },
-    { "fr": null, "en": "Product Owner Junior" },
-    { "fr": "Product Manager B2B", "en": "B2B Product Manager" },
-    { "fr": "Responsable produit", "en": null }
+    { "fr": "Product Manager", "en": "Product Manager", "niveau_ordinal": "aligné", "category": "anglo_startup" },
+    { "fr": "Product Owner", "en": "Product Owner", "niveau_ordinal": "aligné", "category": "anglo_startup" },
+    { "fr": "Chef de produit", "en": "Product Manager", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Technical Product Manager", "en": "Technical Product Manager", "niveau_ordinal": "aligné", "category": "anglo_startup" },
+    { "fr": "Product Manager junior", "en": "Junior Product Manager", "niveau_ordinal": "sous-qualifié", "category": "anglo_startup" },
+    { "fr": "Associate Product Manager", "en": "Associate Product Manager", "niveau_ordinal": "sous-qualifié", "category": "anglo_startup" },
+    { "fr": "Chef de produit digital", "en": "Digital Product Manager", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": null, "en": "Jira Product Owner", "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Product Manager B2B", "en": "B2B Product Manager", "niveau_ordinal": "aligné", "category": "anglo_startup" },
+    { "fr": "Responsable produit", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
@@ -324,16 +324,16 @@ Input: current_job_title="Comptable", target_jobs=["Controleur de gestion", "Ana
 Expected output:
 {
   "titles": [
-    { "fr": "Controleur de gestion", "en": "Management Controller" },
-    { "fr": "Controleur de gestion senior", "en": "Senior Financial Controller" },
-    { "fr": "Controleur de gestion confirme", "en": null },
-    { "fr": "Responsable controle de gestion", "en": "Controlling Manager" },
-    { "fr": "Controleur financier", "en": "Financial Controller" },
-    { "fr": "Analyste financier", "en": "Financial Analyst" },
-    { "fr": "Analyste financier senior", "en": "Senior Financial Analyst" },
-    { "fr": "Charge d'etudes financieres", "en": null },
-    { "fr": "Analyste de gestion", "en": "Business Analyst - Finance" },
-    { "fr": "Controleur de gestion industriel", "en": null }
+    { "fr": "Controleur de gestion", "en": "Management Controller", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Controleur de gestion senior", "en": "Senior Financial Controller", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Controleur de gestion confirme", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Responsable controle de gestion", "en": "Controlling Manager", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Controleur financier", "en": "Financial Controller", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Analyste financier", "en": "Financial Analyst", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Analyste financier senior", "en": "Senior Financial Analyst", "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Charge d'etudes financieres", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": null, "en": "SAP FI/CO Analyst", "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Controleur de gestion industriel", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
@@ -380,16 +380,16 @@ Input: target_jobs=["Developpeur web"], seniority_acceptance="junior_only"
 Expected output:
 {
   "titles": [
-    { "fr": "Developpeur web junior", "en": "Junior Web Developer" },
-    { "fr": "Developpeur debutant", "en": "Entry-Level Developer" },
-    { "fr": "Developpeur web junior formation assuree", "en": null },
-    { "fr": "Developpeur front-end junior", "en": "Junior Frontend Developer" },
-    { "fr": "Developpeur back-end junior", "en": "Junior Backend Developer" },
-    { "fr": "Developpeur junior reconversion", "en": null },
-    { "fr": "Developpeur fullstack junior", "en": "Junior Fullstack Developer" },
-    { "fr": "Developpeur HTML/CSS/JavaScript junior", "en": null },
-    { "fr": null, "en": "Entry-Level Software Developer" },
-    { "fr": "Developpeur web debutant accepte", "en": null }
+    { "fr": "Developpeur web junior", "en": "Junior Web Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur debutant", "en": "Entry-Level Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur web junior formation assuree", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur front-end junior", "en": "Junior Frontend Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur back-end junior", "en": "Junior Backend Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur junior reconversion", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur fullstack junior", "en": "Junior Fullstack Developer", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Developpeur HTML/CSS/JavaScript junior", "en": null, "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": null, "en": "Entry-Level React Developer", "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Developpeur web debutant accepte", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
@@ -399,16 +399,16 @@ Input: target_jobs=["Infirmier"], seniority_acceptance="both"
 Expected output:
 {
   "titles": [
-    { "fr": "Infirmier debutant", "en": null },
-    { "fr": "Infirmiere diplomee d'Etat", "en": null },
-    { "fr": "Infirmier diplome d'Etat", "en": null },
-    { "fr": "IDE", "en": null },
-    { "fr": "Infirmier junior", "en": null },
-    { "fr": "Infirmier en soins generaux", "en": null },
-    { "fr": "Infirmier hospitalier", "en": null },
-    { "fr": "Infirmiere polyvalente", "en": null },
-    { "fr": "Infirmier de nuit", "en": null },
-    { "fr": "Infirmier en reconversion", "en": null }
+    { "fr": "Infirmier debutant", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Infirmiere diplomee d'Etat", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Infirmier diplome d'Etat", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "IDE", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Infirmier junior", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Infirmier en soins generaux", "en": null, "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Infirmier hospitalier", "en": null, "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Infirmiere polyvalente", "en": null, "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Infirmier de nuit", "en": null, "niveau_ordinal": "évolution_modérée", "category": "classic_fr" },
+    { "fr": "Infirmier en reconversion", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
@@ -458,16 +458,16 @@ Input: education_level="Bac+5", education_field="Ecole de commerce", contract_ty
 Expected output:
 {
   "titles": [
-    { "fr": "Charge de marketing en alternance", "en": "Marketing Associate Apprentice" },
-    { "fr": "Assistant chef de produit en alternance", "en": null },
-    { "fr": "Business Developer en alternance", "en": "Business Developer Apprentice" },
-    { "fr": "Charge de communication en alternance", "en": null },
-    { "fr": "Alternant marketing digital", "en": "Digital Marketing Apprentice" },
-    { "fr": "Charge de developpement commercial en alternance", "en": null },
-    { "fr": "Assistant chef de projet marketing en alternance", "en": null },
-    { "fr": "Alternant controle de gestion", "en": null },
-    { "fr": null, "en": "Sales Development Representative Apprentice" },
-    { "fr": "Assistant ressources humaines en alternance", "en": "HR Apprentice" }
+    { "fr": "Charge de marketing en alternance", "en": "Marketing Associate Apprentice", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Assistant chef de produit en alternance", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Business Developer en alternance", "en": "Business Developer Apprentice", "niveau_ordinal": "aligné", "category": "anglo_startup" },
+    { "fr": "Charge de communication en alternance", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Alternant marketing digital", "en": "Digital Marketing Apprentice", "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Charge de developpement commercial en alternance", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Assistant chef de projet marketing en alternance", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Alternant controle de gestion", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": null, "en": "Salesforce Apprentice", "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Assistant ressources humaines en alternance", "en": "HR Apprentice", "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
@@ -477,16 +477,16 @@ Input: education_level="Bac+2", education_field="BTS informatique", contract_typ
 Expected output:
 {
   "titles": [
-    { "fr": "Stagiaire developpeur web", "en": null },
-    { "fr": "Stage developpeur informatique", "en": null },
-    { "fr": "Stagiaire developpeur front-end", "en": null },
-    { "fr": "Stagiaire developpeur back-end", "en": null },
-    { "fr": "Stage administration systemes", "en": null },
-    { "fr": "Stagiaire technicien informatique", "en": null },
-    { "fr": "Stage support informatique", "en": null },
-    { "fr": "Stagiaire developpement d'applications", "en": null },
-    { "fr": "Stage webmaster", "en": null },
-    { "fr": "Stagiaire integrateur web", "en": null }
+    { "fr": "Stagiaire developpeur web", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stage developpeur informatique", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stagiaire developpeur front-end", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stagiaire developpeur back-end", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stage administration systemes", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stagiaire technicien informatique", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stage support informatique", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stagiaire developpement d'applications", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" },
+    { "fr": "Stagiaire React Vue.js", "en": null, "niveau_ordinal": "aligné", "category": "hard_skill" },
+    { "fr": "Stagiaire integrateur web", "en": null, "niveau_ordinal": "aligné", "category": "classic_fr" }
   ]
 }
 
