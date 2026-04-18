@@ -97,3 +97,35 @@ export type SearchTitlesData = z.infer<typeof searchTitlesDataSchema>;
 export const llmTitleOutputSchema = z.object({
   titles: z.array(searchTitleSchema).min(1).max(18),
 });
+
+// ---------------------------------------------------------------------------
+// Arbitre de réalité (pipeline de génération de titres V1)
+// ---------------------------------------------------------------------------
+
+export const niveauCibleEnum = z.enum([
+  "junior",
+  "confirmé",
+  "senior",
+  "lead",
+  "manager",
+  "director",
+]);
+export type NiveauCible = z.infer<typeof niveauCibleEnum>;
+
+export const gapDetectedEnum = z.enum([
+  "none",
+  "mild_downgrade",
+  "strong_downgrade",
+  "mild_upgrade",
+  "strong_upgrade",
+]);
+export type GapDetected = z.infer<typeof gapDetectedEnum>;
+
+export const arbitreOutputSchema = z.object({
+  analyse_realite: z.string().min(10).max(500),
+  niveau_cible_effectif: niveauCibleEnum,
+  gap_detected: gapDetectedEnum,
+  rationale_debug: z.string().min(1).max(500),
+});
+
+export type ArbitreOutput = z.infer<typeof arbitreOutputSchema>;
