@@ -24,7 +24,8 @@
     "lint:ws": "pnpm dlx sherif@latest",
     "postinstall": "pnpm lint:ws",
     "typecheck": "turbo run typecheck",
-    "ui-add": "turbo run ui-add"
+    "ui-add": "turbo run ui-add",
+    "docker:up": "docker compose -f docker-compose.dev.yml up -d"
   },
   "devDependencies": {
     "@jobfindeer/prettier-config": "workspace:*",
