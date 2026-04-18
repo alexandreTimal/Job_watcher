@@ -27,35 +27,72 @@ export type BranchParams =
   | { branch: "5"; education_level: string; education_field: string; contract_types: string[] };
 
 /** Prompt système partagé par toutes les branches. */
-export const TITLE_GEN_SYSTEM_PROMPT = `You are a job title generator for JobFindeer, a French job search assistant. Your role is to produce lists of job titles that will be used as search queries on French job boards (France Travail, Welcome to the Jungle, HelloWork, Indeed FR, LinkedIn).
+export const TITLE_GEN_SYSTEM_PROMPT = `You are a job title generator for JobFindeer, a French job search assistant. Your role is to produce lists of job titles used as search queries on French job boards (France Travail, Welcome to the Jungle, HelloWork, Indeed FR, LinkedIn).
+
+You receive an "Arbitre de réalité" output that tells you the calibrated target level. You MUST calibrate your titles against \`niveau_cible_effectif\`, NOT against the user's raw expectations.
 
 ## Your output
 
-You MUST return a valid JSON object with the following structure:
+You MUST return a valid JSON object with this exact structure:
 
 {
   "titles": [
-    { "fr": "string or null", "en": "string or null" },
+    {
+      "fr": "string or null",
+      "en": "string or null",
+      "niveau_ordinal": "aligné" | "évolution_modérée" | "stretch_ambitieux" | "sous-qualifié",
+      "category": "classic_fr" | "anglo_startup" | "hard_skill"
+    },
     ...
   ]
 }
 
 ## Strict rules
 
-1. Return ONLY valid JSON. No markdown, no code fences, no explanatory text before or after.
-2. Each title entry must have both "fr" and "en" fields. One of them MAY be null if the title only exists in one language on the French market.
-3. Generate between 10 and 15 titles per request. Fewer is acceptable if the job is very niche. Never generate more than 18.
-4. Only return titles that are ACTUALLY used on French job listings. Do NOT invent creative or unusual titles.
-5. Order the list by relevance, most relevant first.
-6. Do NOT include the company name, seniority qualifier, or location in the titles unless explicitly requested.
-7. For tech, marketing, data, finance, consulting, and startup roles: ALWAYS include English equivalents, as they are dominant on the French market.
-8. For trades, hospitality, retail, healthcare, administration, and public sector roles: French titles are usually sufficient, English equivalents are optional.
-9. Avoid overly generic titles like "employe", "collaborateur", "salarie", or "staff member".
-10. Respect the seniority level requested. If "senior" is requested, do not return junior titles.
+1. Return ONLY valid JSON. No markdown fences, no text outside the JSON.
+2. Each title has both fr and en fields (one may be null for single-language roles).
+3. Generate between 10 and 30 titles per request. Fewer is acceptable for very niche jobs. Never exceed 30.
+4. Only produce titles actually used on real French listings — no invented titles.
+5. Order the list by relevance (most relevant first, aligné titles before stretch).
+
+## niveau_ordinal definitions (relative to niveau_cible_effectif from Arbitre)
+
+- "aligné" : title matches exactly the target level from the Arbitre.
+- "évolution_modérée" : title one level above the target (growth opportunity).
+- "stretch_ambitieux" : title two levels above the target. Produce 0-3 of these max.
+- "sous-qualifié" : title one level below the target. Produce 0-2 of these (useful for debug).
+
+If gap_detected is "strong_downgrade" OR "strong_upgrade", ignore the candidate's raw declared titles entirely and calibrate purely on niveau_cible_effectif.
+
+## Distribution target (rough)
+
+- aligné: ~15 titles
+- évolution_modérée: ~8 titles
+- stretch_ambitieux: ~3 titles
+- sous-qualifié: ~2 titles
+
+Adjust per job family (a niche trade role may skip stretch entirely).
+
+## category definitions
+
+- "classic_fr" : traditional French title (ex: "Ingénieur commercial", "Serveur en salle", "Comptable").
+- "anglo_startup" : English/startup-style title dominant on the French market (ex: "Account Executive", "Product Manager").
+- "hard_skill" : title embedding a specific technical tool or framework (ex: "Salesforce Sales Rep", "React Developer", "SAP Consultant").
+
+Mix categories when relevant for the role. Trade / hospitality / public sector often has no anglo_startup or hard_skill titles — don't force them.
+
+## Branch-specific semantic mapping
+
+Branches 1-2-3: use niveau_ordinal as defined above.
+Branches 4-5 (reconversion / student): remap semantics since the candidate enters a new field:
+- "aligné" = titles explicitly welcoming beginners/reconverts ("junior formation assurée", "débutant accepté").
+- "évolution_modérée" = intermediate roles accepting transferable skills.
+- "stretch_ambitieux" = rare, reserved for strong transferable profiles.
+- "sous-qualifié" = near-empty on these branches.
 
 ## Quality bar
 
-Imagine you are a recruiter who has seen thousands of French job ads. Your list should feel natural, realistic, and comprehensive. A candidate looking at this list should recognize every title as something they have seen on real job postings.`;
+Imagine you are a French recruiter who has seen thousands of job ads. Every title should feel like something a candidate would actually see on a real listing.`;
 
 /**
  * Builder signature : reçoit les paramètres déjà **sanitisés** par l'appelant
@@ -64,8 +101,22 @@ Imagine you are a recruiter who has seen thousands of French job ads. Your list 
  */
 type Sanitized<T> = T; // alias documentaire
 
+import type { ArbitreOutput } from "@jobfindeer/validators";
+
+/** Bloc Arbitre injecté dans chaque builder juste avant `## Your turn`. */
+function arbitreBlock(arbitre: ArbitreOutput): string {
+  return `## Arbitre de réalité (niveau calibré)
+
+- niveau_cible_effectif : ${arbitre.niveau_cible_effectif}
+- gap_detected : ${arbitre.gap_detected}
+- Analyse : ${arbitre.analyse_realite}
+
+Calibre les titres "aligné" sur ce niveau cible, PAS sur les attentes brutes de l'utilisateur.`;
+}
+
 export function buildBranch1Prompt(
   p: Sanitized<Extract<BranchParams, { branch: "1" }>>,
+  arbitre: ArbitreOutput,
   helpers: { s: (v: unknown) => string },
 ): string {
   const { s } = helpers;
@@ -124,6 +175,8 @@ Expected output:
   ]
 }
 
+${arbitreBlock(arbitre)}
+
 ## Your turn
 
 Now generate the JSON output for the candidate input above. Return only the JSON object, nothing else.`;
@@ -131,6 +184,7 @@ Now generate the JSON output for the candidate input above. Return only the JSON
 
 export function buildBranch2Prompt(
   p: Sanitized<Extract<BranchParams, { branch: "2" }>>,
+  arbitre: ArbitreOutput,
   helpers: { s: (v: unknown) => string; sArr: (v: unknown) => string[] },
 ): string {
   const { s, sArr } = helpers;
@@ -200,6 +254,8 @@ Expected output:
   ]
 }
 
+${arbitreBlock(arbitre)}
+
 ## Your turn
 
 Now generate the JSON output for the candidate input above. Return only the JSON object, nothing else.`;
@@ -207,6 +263,7 @@ Now generate the JSON output for the candidate input above. Return only the JSON
 
 export function buildBranch3Prompt(
   p: Sanitized<Extract<BranchParams, { branch: "3" }>>,
+  arbitre: ArbitreOutput,
   helpers: { s: (v: unknown) => string; sArr: (v: unknown) => string[] },
 ): string {
   const { s, sArr } = helpers;
@@ -280,6 +337,8 @@ Expected output:
   ]
 }
 
+${arbitreBlock(arbitre)}
+
 ## Your turn
 
 Now generate the JSON output for the candidate input above. Return only the JSON object, nothing else.`;
@@ -287,6 +346,7 @@ Now generate the JSON output for the candidate input above. Return only the JSON
 
 export function buildBranch4Prompt(
   p: Sanitized<Extract<BranchParams, { branch: "4" }>>,
+  arbitre: ArbitreOutput,
   helpers: { s: (v: unknown) => string; sArr: (v: unknown) => string[] },
 ): string {
   const { s, sArr } = helpers;
@@ -352,6 +412,8 @@ Expected output:
   ]
 }
 
+${arbitreBlock(arbitre)}
+
 ## Your turn
 
 Now generate the JSON output for the candidate input above. Return only the JSON object, nothing else.`;
@@ -359,6 +421,7 @@ Now generate the JSON output for the candidate input above. Return only the JSON
 
 export function buildBranch5Prompt(
   p: Sanitized<Extract<BranchParams, { branch: "5" }>>,
+  arbitre: ArbitreOutput,
   helpers: { s: (v: unknown) => string },
 ): string {
   const { s } = helpers;
@@ -427,6 +490,8 @@ Expected output:
   ]
 }
 
+${arbitreBlock(arbitre)}
+
 ## Your turn
 
 Now generate the JSON output for the candidate input above. Return only the JSON object, nothing else.`;
@@ -434,18 +499,19 @@ Now generate the JSON output for the candidate input above. Return only the JSON
 
 export function buildTitleGenUserPrompt(
   params: BranchParams,
+  arbitre: ArbitreOutput,
   helpers: { s: (v: unknown) => string; sArr: (v: unknown) => string[] },
 ): string {
   switch (params.branch) {
     case "1":
-      return buildBranch1Prompt(params, helpers);
+      return buildBranch1Prompt(params, arbitre, helpers);
     case "2":
-      return buildBranch2Prompt(params, helpers);
+      return buildBranch2Prompt(params, arbitre, helpers);
     case "3":
-      return buildBranch3Prompt(params, helpers);
+      return buildBranch3Prompt(params, arbitre, helpers);
     case "4":
-      return buildBranch4Prompt(params, helpers);
+      return buildBranch4Prompt(params, arbitre, helpers);
     case "5":
-      return buildBranch5Prompt(params, helpers);
+      return buildBranch5Prompt(params, arbitre, helpers);
   }
 }
