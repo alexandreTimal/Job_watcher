@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod/v4";
 
 import { auth } from "@jobfindeer/auth";
-import type { BranchParams } from "~/lib/title-generator";
+import type { GenerateTitlesInput } from "~/lib/title-generator";
 import { generateTitles } from "~/lib/title-generator";
 import { AVAILABLE_MODEL_IDS } from "~/lib/model-config";
 import { rateLimit } from "~/lib/rate-limit";
@@ -41,6 +41,21 @@ const branch5Input = z.object({
   contract_types: z.array(z.string().min(1).max(50)).min(1).max(3),
 });
 
+const cvProfileSchema = z.object({
+  current_title: z.string().max(200).nullable(),
+  experience_years: z.number().int().min(0).max(70),
+  education_level: z.string().max(100).nullable(),
+  work_history: z
+    .array(
+      z.object({
+        title: z.string().max(200),
+        start: z.string().max(20),
+        end: z.string().max(20),
+      }),
+    )
+    .max(20),
+});
+
 const requestSchema = z.object({
   params: z.discriminatedUnion("branch", [
     branch1Input,
@@ -49,6 +64,7 @@ const requestSchema = z.object({
     branch4Input,
     branch5Input,
   ]),
+  cv_profile: cvProfileSchema,
   model: z.enum(AVAILABLE_MODEL_IDS).optional(),
 });
 
@@ -85,11 +101,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await generateTitles(
-      parsed.data.params as BranchParams,
-      parsed.data.model,
-    );
-    // generateTitles always returns {titles, metrics} even on LLM failure (internal fallback).
+    const input: GenerateTitlesInput = {
+      branch_params: parsed.data.params as GenerateTitlesInput["branch_params"],
+      cv_profile: parsed.data.cv_profile,
+    };
+    const result = await generateTitles(input, parsed.data.model);
+    // generateTitles always returns {arbitre, titles, metrics} even on LLM failure (internal fallback).
     return NextResponse.json(result);
   } catch (err) {
     // Unexpected sync throw (e.g. invalid branch from an unsafe cast). Surface 500.
