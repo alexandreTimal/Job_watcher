@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   TITLE_ARBITRE_SYSTEM_PROMPT,
   buildArbitrePrompt,
-  type ArbitrePromptInput,
 } from "./title-arbitre";
+import type { ArbitrePromptInput } from "./title-arbitre";
 
 const s = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const sArr = (v: unknown) =>

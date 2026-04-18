@@ -8,7 +8,8 @@ vi.mock("@ai-sdk/google", () => ({
 }));
 
 import { generateText } from "ai";
-import { generateTitles, type GenerateTitlesInput } from "./title-generator";
+import { generateTitles } from "./title-generator";
+import type { GenerateTitlesInput } from "./title-generator";
 
 const mockedGenerateText = vi.mocked(generateText);
 

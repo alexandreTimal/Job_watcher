@@ -14,6 +14,8 @@
  *      par les builders via le helper `sanitize` de title-generator.ts (mitigation prompt injection).
  */
 
+import type { ArbitreOutput } from "@jobfindeer/validators";
+
 /**
  * Paramètres d'entrée des prompts de génération de titres, un type par branche.
  * La définition vit ici (avec les prompts qui les consomment) pour garder
@@ -100,8 +102,6 @@ Imagine you are a French recruiter who has seen thousands of job ads. Every titl
  * avant interpolation). Chaque builder se contente de mettre en forme le prompt.
  */
 type Sanitized<T> = T; // alias documentaire
-
-import type { ArbitreOutput } from "@jobfindeer/validators";
 
 /** Bloc Arbitre injecté dans chaque builder juste avant `## Your turn`. */
 function arbitreBlock(arbitre: ArbitreOutput): string {

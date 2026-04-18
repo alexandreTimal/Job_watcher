@@ -3,9 +3,11 @@ import { google } from "@ai-sdk/google";
 import {
   arbitreOutputSchema,
   llmTitleOutputSchema,
-  type ArbitreOutput,
-  type NiveauCible,
-  type SearchTitle,
+} from "@jobfindeer/validators";
+import type {
+  ArbitreOutput,
+  NiveauCible,
+  SearchTitle,
 } from "@jobfindeer/validators";
 import type { ModelId } from "./model-config";
 import { MODEL_CONFIG, isAvailableModel } from "./model-config";
@@ -14,9 +16,11 @@ import {
   TITLE_GEN_SYSTEM_PROMPT,
   buildArbitrePrompt,
   buildTitleGenUserPrompt,
-  type BranchParams,
-  type CvProfileForArbitre,
-  type UserExpectations,
+} from "./prompts";
+import type {
+  BranchParams,
+  CvProfileForArbitre,
+  UserExpectations,
 } from "./prompts";
 
 export type { BranchParams, CvProfileForArbitre };
@@ -137,12 +141,12 @@ function buildUserExpectationsFromBranch(
       };
     case "3":
       return {
-        declared_target_titles: p.target_jobs ?? [],
+        declared_target_titles: p.target_jobs,
         declared_seniority: null,
       };
     case "4":
       return {
-        declared_target_titles: p.target_jobs ?? [],
+        declared_target_titles: p.target_jobs,
         declared_seniority: p.seniority_acceptance,
       };
     case "5":

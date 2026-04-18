@@ -21,7 +21,7 @@ export interface CvProfileForArbitre {
   current_title: string | null;
   experience_years: number;
   education_level: string | null;
-  work_history: Array<{ title: string; start: string; end: string }>;
+  work_history: { title: string; start: string; end: string }[];
 }
 
 export interface UserExpectations {

@@ -5,8 +5,8 @@ import type { ArbitreOutput } from "@jobfindeer/validators";
 import {
   TITLE_GEN_SYSTEM_PROMPT,
   buildTitleGenUserPrompt,
-  type BranchParams,
 } from "./title-generation";
+import type { BranchParams } from "./title-generation";
 
 const s = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const sArr = (v: unknown) =>
