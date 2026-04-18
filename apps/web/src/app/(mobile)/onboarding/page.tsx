@@ -19,6 +19,7 @@ import { CommonQuestions, type CommonPrefs } from "./_components/CommonQuestions
 import { TitleValidation } from "./_components/TitleValidation";
 import { StepNavigation } from "./_components/StepNavigation";
 import { buildTitleGenParams } from "~/lib/title-params";
+import { hydrateLegacySearchTitles } from "~/lib/hydrate-search-titles";
 import type { SearchTitle, SearchTitleWithActive } from "@jobfindeer/validators";
 
 const STEPS = [
@@ -146,8 +147,8 @@ export default function OnboardingPage() {
       setCalibrationData(profile.calibrationAnswers as Record<string, unknown>);
     }
     if (profile.searchTitles) {
-      const st = profile.searchTitles as { titles: SearchTitle[]; generated_at?: string };
-      setGeneratedTitles(st.titles ?? []);
+      const st = profile.searchTitles as { titles?: unknown; generated_at?: string };
+      setGeneratedTitles(hydrateLegacySearchTitles(st.titles));
       if (st.generated_at) setGeneratedAt(st.generated_at);
     }
 
@@ -317,11 +318,23 @@ export default function OnboardingPage() {
         extraction ?? {},
         calibrationData as Record<string, unknown>,
       );
+      const cv_profile = {
+        current_title: extraction?.currentTitle ?? null,
+        experience_years: extraction?.experienceYears ?? 0,
+        education_level: extraction?.educationLevel ?? null,
+        work_history: (extraction?.workHistory ?? [])
+          .slice(0, 20)
+          .map((w) => ({
+            title: (w.title ?? "").slice(0, 200),
+            start: (w.start ?? "").slice(0, 20),
+            end: (w.end ?? "").slice(0, 20),
+          })),
+      };
       const fetchedAt = new Date().toISOString();
       const res = await fetch("/api/generate-titles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ params }),
+        body: JSON.stringify({ params, cv_profile }),
       });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
@@ -512,7 +525,12 @@ export default function OnboardingPage() {
                     setTitlesError(null);
                     setGeneratedAt(new Date().toISOString());
                     setGeneratedTitles([
-                      { fr: extraction?.currentTitle ?? "Mon poste", en: null },
+                      {
+                        fr: extraction?.currentTitle ?? "Mon poste",
+                        en: null,
+                        niveau_ordinal: "aligné",
+                        category: "classic_fr",
+                      },
                     ]);
                   }}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium"

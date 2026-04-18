@@ -63,10 +63,27 @@ const nonBlankStringOrNull = z
   .transform((v) => (v === null ? null : v.trim()))
   .transform((v) => (v === null || v.length === 0 ? null : v));
 
+export const niveauOrdinalEnum = z.enum([
+  "aligné",
+  "évolution_modérée",
+  "stretch_ambitieux",
+  "sous-qualifié",
+]);
+export type NiveauOrdinal = z.infer<typeof niveauOrdinalEnum>;
+
+export const titleCategoryEnum = z.enum([
+  "classic_fr",
+  "anglo_startup",
+  "hard_skill",
+]);
+export type TitleCategory = z.infer<typeof titleCategoryEnum>;
+
 export const searchTitleSchema = z
   .object({
     fr: nonBlankStringOrNull,
     en: nonBlankStringOrNull,
+    niveau_ordinal: niveauOrdinalEnum,
+    category: titleCategoryEnum,
   })
   .refine((t) => t.fr !== null || t.en !== null, {
     message: "Au moins un des champs fr ou en doit être non vide",
@@ -78,6 +95,8 @@ export const searchTitleWithActiveSchema = z
   .object({
     fr: nonBlankStringOrNull,
     en: nonBlankStringOrNull,
+    niveau_ordinal: niveauOrdinalEnum,
+    category: titleCategoryEnum,
     active: z.boolean(),
   })
   .refine((t) => t.fr !== null || t.en !== null, {
@@ -86,14 +105,53 @@ export const searchTitleWithActiveSchema = z
 
 export type SearchTitleWithActive = z.infer<typeof searchTitleWithActiveSchema>;
 
+/**
+ * Cap commun aux titres générés/persistés.
+ * Doit rester >= au cap LLM (`llmTitleOutputSchema`) ; bumper les deux ensemble
+ * si le Generator augmente sa borne.
+ */
+export const TITLES_MAX = 30;
+
 export const searchTitlesDataSchema = z.object({
   generated_at: z.iso.datetime(),
   branch_used: branchEnum,
-  titles: z.array(searchTitleWithActiveSchema).min(1).max(50),
+  titles: z.array(searchTitleWithActiveSchema).min(1).max(TITLES_MAX),
 });
 
 export type SearchTitlesData = z.infer<typeof searchTitlesDataSchema>;
 
 export const llmTitleOutputSchema = z.object({
-  titles: z.array(searchTitleSchema).min(1).max(18),
+  titles: z.array(searchTitleSchema).min(1).max(TITLES_MAX),
 });
+
+// ---------------------------------------------------------------------------
+// Arbitre de réalité (pipeline de génération de titres V1)
+// ---------------------------------------------------------------------------
+
+export const niveauCibleEnum = z.enum([
+  "junior",
+  "confirmé",
+  "senior",
+  "lead",
+  "manager",
+  "director",
+]);
+export type NiveauCible = z.infer<typeof niveauCibleEnum>;
+
+export const gapDetectedEnum = z.enum([
+  "none",
+  "mild_downgrade",
+  "strong_downgrade",
+  "mild_upgrade",
+  "strong_upgrade",
+]);
+export type GapDetected = z.infer<typeof gapDetectedEnum>;
+
+export const arbitreOutputSchema = z.object({
+  analyse_realite: z.string().min(10).max(500),
+  niveau_cible_effectif: niveauCibleEnum,
+  gap_detected: gapDetectedEnum,
+  rationale_debug: z.string().min(1).max(500),
+});
+
+export type ArbitreOutput = z.infer<typeof arbitreOutputSchema>;
