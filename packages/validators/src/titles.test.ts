@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { arbitreOutputSchema } from "./onboarding";
+import {
+  arbitreOutputSchema,
+  llmTitleOutputSchema,
+  searchTitleSchema,
+} from "./onboarding";
 
 describe("arbitreOutputSchema", () => {
   const valid = {
@@ -41,5 +45,72 @@ describe("arbitreOutputSchema", () => {
   it("rejette un champ manquant", () => {
     const { rationale_debug: _removed, ...incomplete } = valid;
     expect(() => arbitreOutputSchema.parse(incomplete)).toThrow();
+  });
+});
+
+describe("searchTitleSchema (refactor V1)", () => {
+  const validTitle = {
+    fr: "Développeur senior",
+    en: "Senior Developer",
+    niveau_ordinal: "aligné",
+    category: "classic_fr",
+  };
+
+  it("accepte un titre complet", () => {
+    expect(searchTitleSchema.parse(validTitle)).toEqual(validTitle);
+  });
+
+  it("rejette niveau_ordinal hors enum", () => {
+    expect(() =>
+      searchTitleSchema.parse({ ...validTitle, niveau_ordinal: "parfait" }),
+    ).toThrow();
+  });
+
+  it("rejette category hors enum", () => {
+    expect(() =>
+      searchTitleSchema.parse({ ...validTitle, category: "autre" }),
+    ).toThrow();
+  });
+
+  it("rejette fr=null ET en=null simultanément", () => {
+    expect(() =>
+      searchTitleSchema.parse({ ...validTitle, fr: null, en: null }),
+    ).toThrow();
+  });
+
+  it("accepte fr=null si en présent", () => {
+    expect(searchTitleSchema.parse({ ...validTitle, fr: null })).toMatchObject({
+      fr: null,
+      en: "Senior Developer",
+    });
+  });
+});
+
+describe("llmTitleOutputSchema (refactor V1)", () => {
+  const makeTitle = (n: number) => ({
+    fr: `Titre ${n}`,
+    en: null,
+    niveau_ordinal: "aligné" as const,
+    category: "classic_fr" as const,
+  });
+
+  it("accepte 1 à 30 titres", () => {
+    expect(
+      llmTitleOutputSchema.parse({ titles: [makeTitle(1)] }).titles,
+    ).toHaveLength(1);
+    expect(
+      llmTitleOutputSchema.parse({
+        titles: Array.from({ length: 30 }, (_, i) => makeTitle(i)),
+      }).titles,
+    ).toHaveLength(30);
+  });
+
+  it("rejette 0 titres", () => {
+    expect(() => llmTitleOutputSchema.parse({ titles: [] })).toThrow();
+  });
+
+  it("rejette plus de 30 titres", () => {
+    const titles = Array.from({ length: 31 }, (_, i) => makeTitle(i));
+    expect(() => llmTitleOutputSchema.parse({ titles })).toThrow();
   });
 });

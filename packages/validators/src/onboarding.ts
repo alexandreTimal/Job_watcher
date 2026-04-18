@@ -63,10 +63,27 @@ const nonBlankStringOrNull = z
   .transform((v) => (v === null ? null : v.trim()))
   .transform((v) => (v === null || v.length === 0 ? null : v));
 
+export const niveauOrdinalEnum = z.enum([
+  "aligné",
+  "évolution_modérée",
+  "stretch_ambitieux",
+  "sous-qualifié",
+]);
+export type NiveauOrdinal = z.infer<typeof niveauOrdinalEnum>;
+
+export const titleCategoryEnum = z.enum([
+  "classic_fr",
+  "anglo_startup",
+  "hard_skill",
+]);
+export type TitleCategory = z.infer<typeof titleCategoryEnum>;
+
 export const searchTitleSchema = z
   .object({
     fr: nonBlankStringOrNull,
     en: nonBlankStringOrNull,
+    niveau_ordinal: niveauOrdinalEnum,
+    category: titleCategoryEnum,
   })
   .refine((t) => t.fr !== null || t.en !== null, {
     message: "Au moins un des champs fr ou en doit être non vide",
@@ -78,6 +95,8 @@ export const searchTitleWithActiveSchema = z
   .object({
     fr: nonBlankStringOrNull,
     en: nonBlankStringOrNull,
+    niveau_ordinal: niveauOrdinalEnum,
+    category: titleCategoryEnum,
     active: z.boolean(),
   })
   .refine((t) => t.fr !== null || t.en !== null, {
@@ -95,7 +114,7 @@ export const searchTitlesDataSchema = z.object({
 export type SearchTitlesData = z.infer<typeof searchTitlesDataSchema>;
 
 export const llmTitleOutputSchema = z.object({
-  titles: z.array(searchTitleSchema).min(1).max(18),
+  titles: z.array(searchTitleSchema).min(1).max(30),
 });
 
 // ---------------------------------------------------------------------------
